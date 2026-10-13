@@ -147,7 +147,7 @@ const DATA=/*DATA*/[];
 const PLAN={
   key:'2026-10',
   tracked:{meta:0,tiktok:500000,asa:0,snap:0,liftoff:150000,google:75000,point2web:0,winklelab:20000},
-  untracked:[['Meta side accounts (Stadium Live, PlatinumAccounts, JC)',70000],['Ninja Promo',35000],['Almedia',15000]]
+  untracked:[['Meta side accounts (Stadium Live, PlatinumAccounts, JC)',70000],['Ninja Promo',35000]]
 };
 const planTracked=()=>Object.values(PLAN.tracked).reduce((a,b)=>a+b,0);
 const planTotal=()=>planTracked()+PLAN.untracked.reduce((a,x)=>a+x[1],0);
