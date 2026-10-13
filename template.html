@@ -9,18 +9,23 @@
 :root{
   --bg:#f5f6f8;--surface:#ffffff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--soft:#f1f5f9;
   --accent:#2563eb;--accent-ink:#ffffff;--proj:#b45309;--proj-bg:#fef3c7;
-  --c-meta:#3b82f6;--c-tiktok:#14b8a6;--c-asa:#94a3b8;--c-snap:#f59e0b;--c-liftoff:#8b5cf6;--c-google:#f43f5e;
+  --over:#b91c1c;--under:#15803d;
+  --c-meta:#3b82f6;--c-tiktok:#14b8a6;--c-asa:#94a3b8;--c-snap:#f59e0b;--c-liftoff:#8b5cf6;--c-google:#f43f5e;--c-point2web:#84cc16;--c-winklelab:#ec4899;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --bg:#0b1020;--surface:#131a2e;--ink:#e6ebf5;--muted:#8d99b3;--line:#232c47;--soft:#1a2340;
     --accent:#60a5fa;--accent-ink:#0b1020;--proj:#fbbf24;--proj-bg:#3a2e0b;
+    --over:#f87171;--under:#4ade80;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0b1020;--surface:#131a2e;--ink:#e6ebf5;--muted:#8d99b3;--line:#232c47;--soft:#1a2340;
   --accent:#60a5fa;--accent-ink:#0b1020;--proj:#fbbf24;--proj-bg:#3a2e0b;
+  --over:#f87171;--under:#4ade80;
 }
+.over{color:var(--over);font-weight:600}
+.under{color:var(--under);font-weight:600}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
@@ -88,6 +93,13 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8
     <p class="note" id="heroNote"></p>
   </section>
 
+  <section class="card" id="planCard" hidden>
+    <h2 id="planTitle">Plan vs projection</h2>
+    <div class="hero" id="planHero"></div>
+    <div class="scroll" style="margin-top:12px"><table id="plan"></table></div>
+    <p class="note" id="planNote"></p>
+  </section>
+
   <section class="card">
     <h2>Run-rate used for the remaining days</h2>
     <div class="controls">
@@ -122,15 +134,24 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8
     </details>
   </section>
 
-  <p class="note">Source: Stadium Vault Ad Spend Tracker sheet (AppsFlyer cost for Meta, TikTok, ASA, Snapchat and Liftoff; Google Ads for Google, converted to USD). Meta has been $0 since the account was disabled on Sep 8. ASA and Google figures carry known basis differences described in the tracker notes.</p>
+  <p class="note">Total paid spend across all eight channels. Source: Stadium Vault Ad Spend Tracker sheet (AppsFlyer cost for Meta, TikTok, ASA, Snapchat and Liftoff; Google Ads for Google, converted to USD), AppsFlyer cost for Point2Web ($12 per install, since Oct 1), and Winkle Lab's cost sheet ($25 per purchaser, since Oct 5). Winkle Lab days after their latest report are estimated from AppsFlyer purchaser counts and are replaced when they update. Meta has been $0 since the account was disabled on Sep 8.</p>
 </div>
 
 <script>
 const CH=[
   {k:'meta',n:'Meta'},{k:'tiktok',n:'TikTok'},{k:'asa',n:'Apple Search Ads'},
-  {k:'snap',n:'Snapchat'},{k:'liftoff',n:'Liftoff'},{k:'google',n:'Google'}
+  {k:'snap',n:'Snapchat'},{k:'liftoff',n:'Liftoff'},{k:'google',n:'Google'},
+  {k:'point2web',n:'Point2Web'},{k:'winklelab',n:'Winkle Lab'}
 ];
 const DATA=/*DATA*/[];
+const PLAN={
+  key:'2026-10',
+  tracked:{meta:0,tiktok:500000,asa:0,snap:0,liftoff:150000,google:75000,point2web:0,winklelab:20000},
+  untracked:[['Meta side accounts (Stadium Live, PlatinumAccounts, JC)',70000],['Ninja Promo',35000],['Almedia',15000]]
+};
+const planTracked=()=>Object.values(PLAN.tracked).reduce((a,b)=>a+b,0);
+const planTotal=()=>planTracked()+PLAN.untracked.reduce((a,x)=>a+x[1],0);
+const gap=n=>{const r=Math.round(n);return r===0?'on plan':'<span class="'+(r>0?'over':'under')+'">'+(r>0?'+':'-')+money(Math.abs(r))+(r>0?' over':' under')+'</span>';};
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const days=DATA.map(r=>({d:r[0],v:r.slice(1)}));
 const S={lb:'7',ov:{}};
@@ -167,7 +188,7 @@ function renderMonths(M){
   days.forEach(x=>{const k=x.d.slice(0,7);(by[k]=by[k]||[]).push(x);});
   const keys=Object.keys(by).sort();
   let h='<thead><tr><th>Month</th>'+CH.map((c,i)=>'<th>'+swatch(i)+c.n+'</th>').join('')+
-    '<th>Total</th><th>Days</th><th>Avg / day</th><th></th></tr></thead><tbody>';
+    '<th>Total</th><th>Planned</th><th>vs plan</th><th>Days</th><th>Avg / day</th><th></th></tr></thead><tbody>';
   const grand=CH.map(()=>0);
   keys.forEach(k=>{
     const rows=by[k],cur=k===M.key;
@@ -178,12 +199,13 @@ function renderMonths(M){
     const dcount=cur?M.dim:rows.length;
     h+='<tr'+(cur?' class="cur"':'')+'><td>'+mlabel(k)+'</td>'+
       shown.map(v=>'<td'+(cur?' class="proj"':'')+'>'+money(v)+'</td>').join('')+
-      '<td>'+money(tot)+'</td><td>'+(cur?M.ld+' of '+M.dim:rows.length)+'</td><td>'+money(tot/dcount)+'</td>'+
+      '<td>'+money(tot)+'</td>'+(k===PLAN.key?'<td>'+money(planTotal())+'</td><td>'+gap(tot-planTotal())+'</td>':'<td></td><td></td>')+
+      '<td>'+(cur?M.ld+' of '+M.dim:rows.length)+'</td><td>'+money(tot/dcount)+'</td>'+
       '<td>'+(cur?'<span class="tag p">projected</span>':'<span class="tag">final</span>')+'</td></tr>';
   });
   const gt=sumV(grand);
   h+='<tr class="total"><td>Actual to date</td>'+grand.map(v=>'<td>'+money(v)+'</td>').join('')+
-    '<td>'+money(gt)+'</td><td>'+days.length+'</td><td>'+money(gt/days.length)+'</td><td></td></tr></tbody>';
+    '<td>'+money(gt)+'</td><td></td><td></td><td>'+days.length+'</td><td>'+money(gt/days.length)+'</td><td></td></tr></tbody>';
   $('months').innerHTML=h;
   $('monthsNote').textContent=mlabel(M.key)+' shows the projected month-end figure (actual so far plus run-rate for the remaining days). May is a partial month starting May 2.';
 }
@@ -199,6 +221,31 @@ function renderHero(M){
     stat('','Run-rate / day',money(dailyRate),'Applied to '+M.remaining+' remaining day'+(M.remaining===1?'':'s'))+
     stat('','Still to spend',money(total-mtdT),Math.round(mtdT/total*100)+'% of month already spent');
   $('heroNote').textContent='The range compares the projection across the 3-day, 7-day, 14-day and month-to-date run-rate windows. Overrides below are not included in the range.';
+}
+
+function renderPlan(M){
+  const card=$('planCard');
+  if(M.key!==PLAN.key){card.hidden=true;return;}
+  card.hidden=false;
+  const proj=sumV(M.proj),mtd=sumV(M.mtd),pt=planTracked(),pa=planTotal();
+  $('planTitle').textContent=mlabel(M.key)+' plan vs projection';
+  const stat=(cls,l,v,s)=>'<div class="stat '+cls+'"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>';
+  $('planHero').innerHTML=
+    stat('','Planned spend',money(pa),'All channels in the plan')+
+    stat('','Projected month-end',money(proj),Math.round(mtd/pa*100)+'% of plan spent so far')+
+    stat('big','Over / under plan',(proj>=pa?'+':'-')+money(Math.abs(proj-pa)),(Math.abs(proj-pa)/pa*100).toFixed(1)+'% '+(proj>=pa?'over':'under')+' plan, all channels')+
+    stat('','Tracked channels only',(proj>=pt?'+':'-')+money(Math.abs(proj-pt)),(Math.abs(proj-pt)/pt*100).toFixed(1)+'% '+(proj>=pt?'over':'under')+' the '+money(pt)+' plan for them');
+  let h='<thead><tr><th>Channel</th><th>Planned</th><th>Spent so far</th><th>% of plan used</th><th>Projected month-end</th><th>Over / under plan</th></tr></thead><tbody>';
+  CH.forEach((c,i)=>{
+    const p=PLAN.tracked[c.k]||0;
+    h+='<tr><td>'+swatch(i)+c.n+'</td><td>'+(p?money(p):'<span class="tag">unplanned</span>')+'</td><td>'+money(M.mtd[i])+'</td><td>'+(p?Math.round(M.mtd[i]/p*100)+'%':'')+'</td><td class="proj">'+money(M.proj[i])+'</td><td>'+(p||M.proj[i]>0.5?gap(M.proj[i]-p):'')+'</td></tr>';
+  });
+  PLAN.untracked.forEach(u=>{
+    h+='<tr><td>'+u[0]+'</td><td>'+money(u[1])+'</td><td colspan="2"><span class="tag">no spend data</span></td><td></td><td>'+gap(0-u[1])+'</td></tr>';
+  });
+  h+='<tr class="total"><td>Total</td><td>'+money(pa)+'</td><td>'+money(mtd)+'</td><td>'+Math.round(mtd/pa*100)+'%</td><td class="proj">'+money(proj)+'</td><td>'+gap(proj-pa)+'</td></tr></tbody>';
+  $('plan').innerHTML=h;
+  $('planNote').textContent='Planned spend is the October budget by channel from the Planned spend column of the cash-plan forecaster (Sheet 4). About '+money(pa-pt)+' of the plan is for channels the spend tracker has no data for, so the total comparison reads lower than the tracked-channels comparison. Snapchat, Apple Search Ads and Point2Web had no planned budget.';
 }
 
 function renderChannels(M){
@@ -260,7 +307,8 @@ function renderCum(M,ser){
   const W=Math.max(320,$('cum').clientWidth||800),H=260,L=56,R=70,T=14,B=26;
   const iw=W-L-R,ih=H-T-B;
   let c=0;const pts=ser.map(s=>{c+=sumV(s.v);return {n:s.n,c,actual:s.actual};});
-  const mx=c*1.08||1;
+  const planOn=M.key===PLAN.key;
+  const mx=Math.max(c,planOn?planTotal():0)*1.08||1;
   const X=n=>L+(n-1)/(M.dim-1||1)*iw,Y=v=>T+ih-v/mx*ih;
   const step=Math.pow(10,Math.floor(Math.log10(mx)));
   let g='';
@@ -269,6 +317,7 @@ function renderCum(M,ser){
   const path=arr=>arr.map((p,i)=>(i?'L':'M')+X(p.n).toFixed(1)+' '+Y(p.c).toFixed(1)).join(' ');
   g+='<path d="'+path(f.filter(p=>p.n>=M.ld))+'" fill="none" stroke="var(--proj)" stroke-width="2.5" stroke-dasharray="6 4"/>';
   g+='<path d="'+path(a)+'" fill="none" stroke="var(--accent)" stroke-width="2.5"/>';
+  if(planOn){const py=Y(planTotal());g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+py+'" y2="'+py+'" stroke="var(--muted)" stroke-dasharray="2 4"/><text x="'+(L+6)+'" y="'+(py-6)+'">Plan '+short(planTotal())+'</text>';}
   const e=pts[pts.length-1];
   g+='<circle cx="'+X(e.n)+'" cy="'+Y(e.c)+'" r="4" style="fill:var(--proj)"/><text x="'+(X(e.n)+8)+'" y="'+(Y(e.c)+4)+'" style="fill:var(--proj);font-weight:600;font-size:12px">'+short(e.c)+'</text>';
   const l=a[a.length-1];
@@ -293,7 +342,7 @@ function render(){
   const M=model(),ser=series(M);
   $('asof').textContent='Data through '+dlabel(M.last.d)+', '+M.last.d.slice(0,4)+' ('+days.length+' days logged)';
   document.querySelectorAll('#lb button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lb===S.lb)));
-  renderMonths(M);renderHero(M);renderChannels(M);renderBars(M,ser);renderCum(M,ser);renderDaily(M,ser);
+  renderMonths(M);renderHero(M);renderPlan(M);renderChannels(M);renderBars(M,ser);renderCum(M,ser);renderDaily(M,ser);
 }
 document.querySelectorAll('#lb button').forEach(b=>b.addEventListener('click',()=>{S.lb=b.dataset.lb;S.ov={};render();}));
 $('reset').addEventListener('click',()=>{S.ov={};render();});
