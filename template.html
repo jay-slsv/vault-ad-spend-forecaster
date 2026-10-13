@@ -96,7 +96,6 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8
   <section class="card" id="planCard" hidden>
     <h2 id="planTitle">Plan vs projection</h2>
     <div class="hero" id="planHero"></div>
-    <div class="scroll" style="margin-top:12px"><table id="plan"></table></div>
     <p class="note" id="planNote"></p>
   </section>
 
@@ -144,13 +143,8 @@ const CH=[
   {k:'point2web',n:'Point2Web'},{k:'winklelab',n:'Winkle Lab'}
 ];
 const DATA=/*DATA*/[];
-const PLAN={
-  key:'2026-10',
-  tracked:{meta:0,tiktok:500000,asa:0,snap:0,liftoff:150000,google:75000,point2web:0,winklelab:20000},
-  untracked:[['Meta side accounts (Stadium Live, PlatinumAccounts, JC)',70000],['Ninja Promo',35000]]
-};
-const planTracked=()=>Object.values(PLAN.tracked).reduce((a,b)=>a+b,0);
-const planTotal=()=>planTracked()+PLAN.untracked.reduce((a,x)=>a+x[1],0);
+const PLAN={key:'2026-10',total:600000};
+const planTotal=()=>PLAN.total;
 const gap=n=>{const r=Math.round(n);return r===0?'on plan':'<span class="'+(r>0?'over':'under')+'">'+(r>0?'+':'-')+money(Math.abs(r))+(r>0?' over':' under')+'</span>';};
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const days=DATA.map(r=>({d:r[0],v:r.slice(1)}));
@@ -227,25 +221,16 @@ function renderPlan(M){
   const card=$('planCard');
   if(M.key!==PLAN.key){card.hidden=true;return;}
   card.hidden=false;
-  const proj=sumV(M.proj),mtd=sumV(M.mtd),pt=planTracked(),pa=planTotal();
+  const proj=sumV(M.proj),mtd=sumV(M.mtd),pa=planTotal(),rate=sumV(M.used);
+  const left=pa-mtd,need=M.remaining?Math.max(0,left)/M.remaining:0;
   $('planTitle').textContent=mlabel(M.key)+' plan vs projection';
   const stat=(cls,l,v,s)=>'<div class="stat '+cls+'"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>';
   $('planHero').innerHTML=
-    stat('','Planned spend',money(pa),'All channels in the plan')+
-    stat('','Projected month-end',money(proj),Math.round(mtd/pa*100)+'% of plan spent so far')+
-    stat('big','Over / under plan',(proj>=pa?'+':'-')+money(Math.abs(proj-pa)),(Math.abs(proj-pa)/pa*100).toFixed(1)+'% '+(proj>=pa?'over':'under')+' plan, all channels')+
-    stat('','Tracked channels only',(proj>=pt?'+':'-')+money(Math.abs(proj-pt)),(Math.abs(proj-pt)/pt*100).toFixed(1)+'% '+(proj>=pt?'over':'under')+' the '+money(pt)+' plan for them');
-  let h='<thead><tr><th>Channel</th><th>Planned</th><th>Spent so far</th><th>% of plan used</th><th>Projected month-end</th><th>Over / under plan</th></tr></thead><tbody>';
-  CH.forEach((c,i)=>{
-    const p=PLAN.tracked[c.k]||0;
-    h+='<tr><td>'+swatch(i)+c.n+'</td><td>'+(p?money(p):'<span class="tag">unplanned</span>')+'</td><td>'+money(M.mtd[i])+'</td><td>'+(p?Math.round(M.mtd[i]/p*100)+'%':'')+'</td><td class="proj">'+money(M.proj[i])+'</td><td>'+(p||M.proj[i]>0.5?gap(M.proj[i]-p):'')+'</td></tr>';
-  });
-  PLAN.untracked.forEach(u=>{
-    h+='<tr><td>'+u[0]+'</td><td>'+money(u[1])+'</td><td colspan="2"><span class="tag">no spend data</span></td><td></td><td>'+gap(0-u[1])+'</td></tr>';
-  });
-  h+='<tr class="total"><td>Total</td><td>'+money(pa)+'</td><td>'+money(mtd)+'</td><td>'+Math.round(mtd/pa*100)+'%</td><td class="proj">'+money(proj)+'</td><td>'+gap(proj-pa)+'</td></tr></tbody>';
-  $('plan').innerHTML=h;
-  $('planNote').textContent='Planned spend is the October budget by channel from the Planned spend column of the cash-plan forecaster (Sheet 4). About '+money(pa-pt)+' of the plan is for channels the spend tracker has no data for, so the total comparison reads lower than the tracked-channels comparison. Snapchat, Apple Search Ads and Point2Web had no planned budget.';
+    stat('','Planned spend',money(pa),'October cap, total paid spend')+
+    stat('','Projected month-end',money(proj),Math.round(mtd/pa*100)+'% of the plan spent so far')+
+    stat('big','Over / under plan',(proj>=pa?'+':'-')+money(Math.abs(proj-pa)),(Math.abs(proj-pa)/pa*100).toFixed(1)+'% '+(proj>=pa?'over':'under')+' plan')+
+    stat('','Daily spend to land on plan',left>0?money(need):'$0','For the '+M.remaining+' remaining days, vs '+money(rate)+' a day run-rate now');
+  $('planNote').textContent='Planned spend is the October cap of about $600K total paid spend from the Oct 5 to Oct 8 meeting notes, which replaced an earlier $700K to $750K projection. The notes give targets for some channels (for example TikTok $10K a day, Liftoff about $3.5K a day) but no full channel budget that adds up to $600K, so the plan is shown at total level only.';
 }
 
 function renderChannels(M){
