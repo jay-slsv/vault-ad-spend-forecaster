@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Ad Spend Forecaster</title>
+<style>
+:root{
+  --bg:#f5f6f8;--surface:#ffffff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--soft:#f1f5f9;
+  --accent:#2563eb;--accent-ink:#ffffff;--proj:#b45309;--proj-bg:#fef3c7;
+  --c-meta:#3b82f6;--c-tiktok:#14b8a6;--c-asa:#94a3b8;--c-snap:#f59e0b;--c-liftoff:#8b5cf6;--c-google:#f43f5e;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1020;--surface:#131a2e;--ink:#e6ebf5;--muted:#8d99b3;--line:#232c47;--soft:#1a2340;
+    --accent:#60a5fa;--accent-ink:#0b1020;--proj:#fbbf24;--proj-bg:#3a2e0b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1020;--surface:#131a2e;--ink:#e6ebf5;--muted:#8d99b3;--line:#232c47;--soft:#1a2340;
+  --accent:#60a5fa;--accent-ink:#0b1020;--proj:#fbbf24;--proj-bg:#3a2e0b;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;margin-bottom:16px}
+h1{font-size:20px;margin:0;letter-spacing:-.01em}
+.asof{color:var(--muted);font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:600}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;color:var(--muted);font-weight:600}
+tbody tr:last-child td{border-bottom:0}
+tr.cur td{background:var(--proj-bg);font-weight:600}
+td.proj,.proj{color:var(--proj)}
+tr.total td{font-weight:700;border-top:2px solid var(--line)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:baseline}
+.hero{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{background:var(--soft);border-radius:10px;padding:12px 14px}
+.stat .l{font-size:12px;color:var(--muted)}
+.stat .v{font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .s{font-size:12px;color:var(--muted)}
+.stat.big{background:var(--accent);color:var(--accent-ink)}
+.stat.big .l,.stat.big .s{color:var(--accent-ink);opacity:.85}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:var(--surface);color:var(--ink);border:0;padding:6px 12px;font:inherit;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.btn{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+label.lbl{color:var(--muted);font-size:13px}
+input.rr{width:96px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;text-align:right}
+input.rr.edited{border-color:var(--proj)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0 0;color:var(--muted);font-size:12px}
+.note{color:var(--muted);font-size:12px;margin:10px 0 0}
+svg text{fill:var(--muted);font-size:11px;font-family:inherit}
+.grid{stroke:var(--line);stroke-width:1}
+.tag{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--soft);color:var(--muted)}
+.tag.p{background:var(--proj-bg);color:var(--proj)}
+details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8px}
+@media (max-width:760px){
+  .hero{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat .v{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ad Spend Forecaster</h1>
+    <div class="asof" id="asof"></div>
+  </header>
+
+  <section class="card">
+    <h2>Month by month</h2>
+    <div class="scroll"><table id="months"></table></div>
+    <p class="note" id="monthsNote"></p>
+  </section>
+
+  <section class="card">
+    <h2 id="heroTitle">Month-end projection</h2>
+    <div class="hero" id="hero"></div>
+    <p class="note" id="heroNote"></p>
+  </section>
+
+  <section class="card">
+    <h2>Run-rate used for the remaining days</h2>
+    <div class="controls">
+      <label class="lbl">Daily run-rate based on</label>
+      <div class="seg" id="lb" role="group" aria-label="Run-rate window">
+        <button data-lb="3">Last 3 days</button>
+        <button data-lb="7">Last 7 days</button>
+        <button data-lb="14">Last 14 days</button>
+        <button data-lb="mtd">Month to date</button>
+      </div>
+      <button class="btn" id="reset">Reset overrides</button>
+    </div>
+    <div class="scroll"><table id="channels"></table></div>
+    <p class="note">Edit any daily run-rate to model a budget change, for example cutting TikTok to a lower daily spend. The projection updates immediately.</p>
+  </section>
+
+  <section class="card">
+    <h2>Daily spend: actual and projected</h2>
+    <div id="bars"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="card">
+    <h2>Cumulative spend through month-end</h2>
+    <div id="cum"></div>
+  </section>
+
+  <section class="card">
+    <details open>
+      <summary>Daily detail for the month</summary>
+      <div class="scroll"><table id="daily"></table></div>
+    </details>
+  </section>
+
+  <p class="note">Source: Stadium Vault Ad Spend Tracker sheet (AppsFlyer cost for Meta, TikTok, ASA, Snapchat and Liftoff; Google Ads for Google, converted to USD). Meta has been $0 since the account was disabled on Sep 8. ASA and Google figures carry known basis differences described in the tracker notes.</p>
+</div>
+
+<script>
+const CH=[
+  {k:'meta',n:'Meta'},{k:'tiktok',n:'TikTok'},{k:'asa',n:'Apple Search Ads'},
+  {k:'snap',n:'Snapchat'},{k:'liftoff',n:'Liftoff'},{k:'google',n:'Google'}
+];
+const DATA=/*DATA*/[];
+const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const days=DATA.map(r=>({d:r[0],v:r.slice(1)}));
+const S={lb:'7',ov:{}};
+const $=id=>document.getElementById(id);
+const money=n=>'$'+Math.round(n).toLocaleString('en-US');
+const short=n=>n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1e3?'$'+(n/1e3).toFixed(n>=1e4?0:1)+'k':'$'+Math.round(n);
+const pad=n=>String(n).padStart(2,'0');
+const mlabel=k=>MN[+k.slice(5,7)-1]+' '+k.slice(0,4);
+const dlabel=d=>MN[+d.slice(5,7)-1].slice(0,3)+' '+(+d.slice(8,10));
+const sumV=v=>v.reduce((a,b)=>a+b,0);
+const swatch=i=>'<span class="dot" style="background:var(--c-'+CH[i].k+')"></span>';
+
+function model(){
+  const last=days[days.length-1];
+  const y=+last.d.slice(0,4),m=+last.d.slice(5,7),ld=+last.d.slice(8,10);
+  const dim=new Date(Date.UTC(y,m,0)).getUTCDate();
+  const key=last.d.slice(0,7);
+  const logged=days.filter(x=>x.d.startsWith(key));
+  const remaining=dim-ld;
+  const colSum=(arr,i)=>arr.reduce((a,x)=>a+x.v[i],0);
+  const colAvg=(arr,i)=>arr.length?colSum(arr,i)/arr.length:0;
+  const win=lb=>lb==='mtd'?logged:days.slice(-Number(lb));
+  const base=CH.map((_,i)=>colAvg(win(S.lb),i));
+  const used=base.map((b,i)=>S.ov[i]!=null?S.ov[i]:b);
+  const mtd=CH.map((_,i)=>colSum(logged,i));
+  const proj=mtd.map((a,i)=>a+used[i]*remaining);
+  const range=['3','7','14','mtd'].map(lb=>CH.reduce((t,_,i)=>t+mtd[i]+colAvg(win(lb),i)*remaining,0));
+  return {last,key,dim,ld,logged,remaining,base,used,mtd,proj,
+    lo:Math.min(...range),hi:Math.max(...range)};
+}
+
+function renderMonths(M){
+  const by={};
+  days.forEach(x=>{const k=x.d.slice(0,7);(by[k]=by[k]||[]).push(x);});
+  const keys=Object.keys(by).sort();
+  let h='<thead><tr><th>Month</th>'+CH.map((c,i)=>'<th>'+swatch(i)+c.n+'</th>').join('')+
+    '<th>Total</th><th>Days</th><th>Avg / day</th><th></th></tr></thead><tbody>';
+  const grand=CH.map(()=>0);
+  keys.forEach(k=>{
+    const rows=by[k],cur=k===M.key;
+    const vals=CH.map((_,i)=>rows.reduce((a,x)=>a+x.v[i],0));
+    vals.forEach((v,i)=>grand[i]+=v);
+    const shown=cur?M.proj:vals;
+    const tot=sumV(shown);
+    const dcount=cur?M.dim:rows.length;
+    h+='<tr'+(cur?' class="cur"':'')+'><td>'+mlabel(k)+'</td>'+
+      shown.map(v=>'<td'+(cur?' class="proj"':'')+'>'+money(v)+'</td>').join('')+
+      '<td>'+money(tot)+'</td><td>'+(cur?M.ld+' of '+M.dim:rows.length)+'</td><td>'+money(tot/dcount)+'</td>'+
+      '<td>'+(cur?'<span class="tag p">projected</span>':'<span class="tag">final</span>')+'</td></tr>';
+  });
+  const gt=sumV(grand);
+  h+='<tr class="total"><td>Actual to date</td>'+grand.map(v=>'<td>'+money(v)+'</td>').join('')+
+    '<td>'+money(gt)+'</td><td>'+days.length+'</td><td>'+money(gt/days.length)+'</td><td></td></tr></tbody>';
+  $('months').innerHTML=h;
+  $('monthsNote').textContent=mlabel(M.key)+' shows the projected month-end figure (actual so far plus run-rate for the remaining days). May is a partial month starting May 2.';
+}
+
+function renderHero(M){
+  const total=sumV(M.proj),mtdT=sumV(M.mtd);
+  const dailyRate=sumV(M.used);
+  $('heroTitle').textContent=mlabel(M.key)+' month-end projection';
+  const stat=(cls,l,v,s)=>'<div class="stat '+cls+'"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>';
+  $('hero').innerHTML=
+    stat('big','Projected total spend',money(total),'Range '+short(M.lo)+' to '+short(M.hi))+
+    stat('','Spent so far',money(mtdT),M.ld+' of '+M.dim+' days logged')+
+    stat('','Run-rate / day',money(dailyRate),'Applied to '+M.remaining+' remaining day'+(M.remaining===1?'':'s'))+
+    stat('','Still to spend',money(total-mtdT),Math.round(mtdT/total*100)+'% of month already spent');
+  $('heroNote').textContent='The range compares the projection across the 3-day, 7-day, 14-day and month-to-date run-rate windows. Overrides below are not included in the range.';
+}
+
+function renderChannels(M){
+  const total=sumV(M.proj);
+  let h='<thead><tr><th>Channel</th><th>Spent so far</th><th>Run-rate / day (editable)</th><th>Remaining days</th><th>Projected month-end</th><th>Share</th></tr></thead><tbody>';
+  CH.forEach((c,i)=>{
+    const edited=S.ov[i]!=null;
+    h+='<tr><td>'+swatch(i)+c.n+'</td><td>'+money(M.mtd[i])+'</td>'+
+      '<td><input class="rr'+(edited?' edited':'')+'" type="number" min="0" step="50" data-i="'+i+'" value="'+Math.round(M.used[i])+'" aria-label="'+c.n+' daily run-rate"></td>'+
+      '<td>'+money(M.used[i]*M.remaining)+'</td><td class="proj">'+money(M.proj[i])+'</td>'+
+      '<td>'+(total?Math.round(M.proj[i]/total*100):0)+'%</td></tr>';
+  });
+  h+='<tr class="total"><td>Total</td><td>'+money(sumV(M.mtd))+'</td><td>'+money(sumV(M.used))+'</td><td>'+
+    money(sumV(M.used)*M.remaining)+'</td><td class="proj">'+money(total)+'</td><td>100%</td></tr></tbody>';
+  $('channels').innerHTML=h;
+  document.querySelectorAll('input.rr').forEach(el=>el.addEventListener('change',()=>{
+    const i=+el.dataset.i,v=el.value===''?null:Math.max(0,Number(el.value));
+    if(v==null||isNaN(v)||Math.round(M.base[i])===Math.round(v)){delete S.ov[i];}else{S.ov[i]=v;}
+    render();
+  }));
+}
+
+function series(M){
+  const map={};M.logged.forEach(x=>map[x.d]=x.v);
+  const out=[];
+  for(let d=1;d<=M.dim;d++){
+    const ds=M.key+'-'+pad(d);
+    const actual=d<=M.ld;
+    out.push({d:ds,n:d,actual,v:actual?(map[ds]||CH.map(()=>0)):M.used});
+  }
+  return out;
+}
+
+function renderBars(M,ser){
+  const W=Math.max(320,$('bars').clientWidth||800),H=300,L=48,R=8,T=12,B=26;
+  const iw=W-L-R,ih=H-T-B;
+  const mx=Math.max(...ser.map(s=>sumV(s.v)))*1.1||1;
+  const step=Math.pow(10,Math.floor(Math.log10(mx)));
+  const ticks=[];for(let t=0;t<=mx;t+=step*(mx/step>6?2:1))ticks.push(t);
+  let g='';
+  ticks.forEach(t=>{const y=T+ih-t/mx*ih;g+='<line class="grid" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+short(t)+'</text>';});
+  const bw=iw/ser.length;
+  ser.forEach((s,idx)=>{
+    let y=T+ih;const x=L+idx*bw+bw*0.15;
+    const tip=dlabel(s.d)+(s.actual?' (actual)':' (projected)')+': '+money(sumV(s.v));
+    g+='<g opacity="'+(s.actual?1:0.45)+'"><title>'+tip+'</title>';
+    s.v.forEach((v,i)=>{const hh=v/mx*ih;y-=hh;g+='<rect x="'+x+'" y="'+y+'" width="'+(bw*0.7)+'" height="'+Math.max(0,hh)+'" style="fill:var(--c-'+CH[i].k+')"/>';});
+    g+='</g>';
+    if(s.n===1||s.n%5===0||s.n===M.dim)g+='<text x="'+(x+bw*0.35)+'" y="'+(H-8)+'" text-anchor="middle">'+s.n+'</text>';
+  });
+  const sx=L+M.ld*bw;
+  g+='<line x1="'+sx+'" x2="'+sx+'" y1="'+T+'" y2="'+(T+ih)+'" stroke="var(--proj)" stroke-dasharray="4 3"/>'+
+     '<text x="'+(sx+4)+'" y="'+(T+10)+'" style="fill:var(--proj)">projected</text>';
+  $('bars').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Daily spend by channel">'+g+'</svg>';
+  $('legend').innerHTML=CH.map((c,i)=>'<span>'+swatch(i)+c.n+'</span>').join('')+'<span>Faded bars are projected days</span>';
+}
+
+function renderCum(M,ser){
+  const W=Math.max(320,$('cum').clientWidth||800),H=260,L=56,R=70,T=14,B=26;
+  const iw=W-L-R,ih=H-T-B;
+  let c=0;const pts=ser.map(s=>{c+=sumV(s.v);return {n:s.n,c,actual:s.actual};});
+  const mx=c*1.08||1;
+  const X=n=>L+(n-1)/(M.dim-1||1)*iw,Y=v=>T+ih-v/mx*ih;
+  const step=Math.pow(10,Math.floor(Math.log10(mx)));
+  let g='';
+  for(let t=0;t<=mx;t+=step*(mx/step>6?2:1)){const y=Y(t);g+='<line class="grid" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+short(t)+'</text>';}
+  const a=pts.filter(p=>p.actual),f=pts.filter(p=>p.actual||p.n===M.ld||!p.actual);
+  const path=arr=>arr.map((p,i)=>(i?'L':'M')+X(p.n).toFixed(1)+' '+Y(p.c).toFixed(1)).join(' ');
+  g+='<path d="'+path(f.filter(p=>p.n>=M.ld))+'" fill="none" stroke="var(--proj)" stroke-width="2.5" stroke-dasharray="6 4"/>';
+  g+='<path d="'+path(a)+'" fill="none" stroke="var(--accent)" stroke-width="2.5"/>';
+  const e=pts[pts.length-1];
+  g+='<circle cx="'+X(e.n)+'" cy="'+Y(e.c)+'" r="4" style="fill:var(--proj)"/><text x="'+(X(e.n)+8)+'" y="'+(Y(e.c)+4)+'" style="fill:var(--proj);font-weight:600;font-size:12px">'+short(e.c)+'</text>';
+  const l=a[a.length-1];
+  g+='<circle cx="'+X(l.n)+'" cy="'+Y(l.c)+'" r="4" style="fill:var(--accent)"/>';
+  [1,5,10,15,20,25,M.dim].forEach(n=>{g+='<text x="'+X(n)+'" y="'+(H-8)+'" text-anchor="middle">'+n+'</text>';});
+  $('cum').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Cumulative spend">'+g+'</svg>';
+}
+
+function renderDaily(M,ser){
+  let h='<thead><tr><th>Date</th>'+CH.map((c,i)=>'<th>'+swatch(i)+c.n+'</th>').join('')+'<th>Total</th><th>Cumulative</th><th></th></tr></thead><tbody>';
+  let c=0;
+  ser.forEach(s=>{
+    const t=sumV(s.v);c+=t;
+    h+='<tr'+(s.actual?'':' style="opacity:.75"')+'><td>'+dlabel(s.d)+'</td>'+
+      s.v.map(v=>'<td'+(s.actual?'':' class="proj"')+'>'+money(v)+'</td>').join('')+
+      '<td>'+money(t)+'</td><td>'+money(c)+'</td><td><span class="tag'+(s.actual?'':' p')+'">'+(s.actual?'actual':'projected')+'</span></td></tr>';
+  });
+  $('daily').innerHTML=h+'</tbody>';
+}
+
+function render(){
+  const M=model(),ser=series(M);
+  $('asof').textContent='Data through '+dlabel(M.last.d)+', '+M.last.d.slice(0,4)+' ('+days.length+' days logged)';
+  document.querySelectorAll('#lb button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lb===S.lb)));
+  renderMonths(M);renderHero(M);renderChannels(M);renderBars(M,ser);renderCum(M,ser);renderDaily(M,ser);
+}
+document.querySelectorAll('#lb button').forEach(b=>b.addEventListener('click',()=>{S.lb=b.dataset.lb;S.ov={};render();}));
+$('reset').addEventListener('click',()=>{S.ov={};render();});
+let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(render,150);});
+render();
+</script>
+</body>
+</html>
