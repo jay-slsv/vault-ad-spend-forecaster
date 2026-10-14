@@ -18,7 +18,7 @@ for arg in sys.argv[1:]:
         continue
     parts += ["0"] * (9 - len(parts))
     spend = [store.num(p) for p in parts[1:9]]
-    row = rows.get(parts[0]) or [parts[0]] + [""] * 11
+    row = rows.get(parts[0]) or [parts[0]] + [""] * (store.NCOLS - 1)
     if row[1:9] != spend:
         changed.append(parts[0])
     row[1:9] = spend

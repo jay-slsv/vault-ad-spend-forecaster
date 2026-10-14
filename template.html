@@ -147,7 +147,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8
     </details>
   </section>
 
-  <p class="note">Total paid spend across all eight channels. Source: Stadium Vault Ad Spend Tracker sheet (AppsFlyer cost for Meta, TikTok, ASA, Snapchat and Liftoff; Google Ads for Google, converted to USD), AppsFlyer cost for Point2Web ($12 per install, since Oct 1), and Winkle Lab's cost sheet ($25 per purchaser, since Oct 5). Winkle Lab days after their latest report are estimated from AppsFlyer purchaser counts and are replaced when they update. Meta has been $0 since the account was disabled on Sep 8. Cash in, withdrawals and inventory cost come from the analytics database using the admin Cash Flow definitions.</p>
+  <p class="note">Total paid spend across all eight channels. Source: Stadium Vault Ad Spend Tracker sheet (AppsFlyer cost for Meta, TikTok, ASA, Snapchat and Liftoff; Google Ads for Google, converted to USD), AppsFlyer cost for Point2Web ($12 per install, since Oct 1), and Winkle Lab's cost sheet ($25 per purchaser, since Oct 5). Winkle Lab days after their latest report are estimated from AppsFlyer purchaser counts and are replaced when they update. Meta has been $0 since the account was disabled on Sep 8. Cash in, withdrawals, shipped card cost, processor fees and UGC marketing come from the analytics database and match the admin Cash Flow page (Net Cash After Marketing).</p>
 </div>
 
 <script>
@@ -161,11 +161,12 @@ const PLAN={key:'2026-10',total:600000};
 const planTotal=()=>PLAN.total;
 const gap=n=>{const r=Math.round(n);return r===0?'on plan':'<span class="'+(r>0?'over':'under')+'">'+(r>0?'+':'-')+money(Math.abs(r))+(r>0?' over':' under')+'</span>';};
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
-const days=DATA.map(r=>({d:r[0],v:r.slice(1,9),c:r.slice(9,12)}));
+const days=DATA.map(r=>({d:r[0],v:r.slice(1,9),c:r.slice(9,14)}));
 const S={lb:'7',ov:{},cov:{},bank:null};
-const CASHL=['Cash in (card payments + wallet top-ups)','Withdrawals','Inventory cost'];
+const CASHL=['Cash in (card payments + wallet top-ups)','Withdrawals','Shipped card cost','Payment processor fees','UGC marketing'];
 const hasCash=x=>x.c[0]!=null;
-const netOf=x=>x.c[0]-x.c[1]-x.c[2]-sumV(x.v);
+const cashOut=c=>c[1]+c[2]+c[3]+c[4];
+const netOf=x=>x.c[0]-cashOut(x.c)-sumV(x.v);
 const $=id=>document.getElementById(id);
 const money=n=>'$'+Math.round(n).toLocaleString('en-US');
 const short=n=>n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1e3?'$'+(n/1e3).toFixed(n>=1e4?0:1)+'k':'$'+Math.round(n);
@@ -196,15 +197,16 @@ function model(){
     const lc=cashDays[cashDays.length-1],cRem=dim-(+lc.d.slice(8,10));
     const cwin=S.lb==='mtd'?cashDays:days.filter(hasCash).slice(-Number(S.lb));
     const cAvg=j=>cwin.length?cwin.reduce((a,x)=>a+x.c[j],0)/cwin.length:0;
-    const cbase=[0,1,2].map(cAvg);
+    const J=[0,1,2,3,4];
+    const cbase=J.map(cAvg);
     const cused=cbase.map((b,j)=>S.cov[j]!=null?S.cov[j]:b);
-    const cmtd=[0,1,2].map(j=>cashDays.reduce((a,x)=>a+x.c[j],0));
+    const cmtd=J.map(j=>cashDays.reduce((a,x)=>a+x.c[j],0));
     const spendMtd=cashDays.reduce((a,x)=>a+sumV(x.v),0);
     const spendRate=sumV(used);
-    const netMtd=cmtd[0]-cmtd[1]-cmtd[2]-spendMtd;
-    const netDay=cused[0]-cused[1]-cused[2]-spendRate;
+    const netMtd=cmtd[0]-cashOut(cmtd)-spendMtd;
+    const netDay=cused[0]-cashOut(cused)-spendRate;
     cash={lastDate:lc.d,cRem,cbase,cused,cmtd,spendMtd,spendRate,netMtd,netDay,netProj:netMtd+netDay*cRem,
-      pj:[0,1,2].map(j=>cmtd[j]+cused[j]*cRem),pSpend:spendMtd+spendRate*cRem};
+      pj:J.map(j=>cmtd[j]+cused[j]*cRem),pSpend:spendMtd+spendRate*cRem};
   }
   return {last,key,dim,ld,logged,remaining,base,used,mtd,proj,cash,
     lo:Math.min(...range),hi:Math.max(...range)};
@@ -296,7 +298,7 @@ function renderCash(M){
   if(!M.cash){card.hidden=true;return;}
   card.hidden=false;
   const c=M.cash,sg=n=>(n>=0?'+':'-')+money(Math.abs(n));
-  const out=c.cmtd[1]+c.cmtd[2]+c.spendMtd,outRate=c.cused[1]+c.cused[2]+c.spendRate;
+  const out=cashOut(c.cmtd)+c.spendMtd,outRate=cashOut(c.cused)+c.spendRate;
   const bankSet=S.bank!=null,projBank=bankSet?S.bank+c.netDay*c.cRem:0;
   $('cashTitle').textContent=mlabel(M.key)+' net cash';
   $('bankLbl').textContent='Your bank balance as of '+dlabel(c.lastDate)+' (optional)';
@@ -306,7 +308,7 @@ function renderCash(M){
     stat('big','Projected month-end net cash',sg(c.netProj),'Run-rate '+sg(c.netDay)+' a day for '+c.cRem+' more day'+(c.cRem===1?'':'s'))+
     stat('','Cash in vs out, per day',money(c.cused[0])+' vs '+money(outRate),'Run-rate going forward')+
     stat('',bankSet?'Projected cash in bank, month-end':'Cash in bank',bankSet?money(projBank):'Enter balance',bankSet?'From '+money(S.bank)+' plus projected net cash':'Type your balance below');
-  const lines=[['Cash in (card payments + wallet top-ups)',0,1],['Withdrawals',1,-1],['Inventory cost',2,-1]];
+  const lines=CASHL.map((l,j)=>[l,j]);
   let h='<thead><tr><th>Line</th><th>Month to date</th><th>Run-rate / day (editable)</th><th>Remaining days</th><th>Projected month-end</th></tr></thead><tbody>';
   lines.forEach(l=>{
     const j=l[1],edited=S.cov[j]!=null;
@@ -320,7 +322,7 @@ function renderCash(M){
     if(v==null||isNaN(v)||Math.round(c.cbase[j])===Math.round(v)){delete S.cov[j];}else{S.cov[j]=v;}
     render();
   }));
-  $('cashNote').textContent='Net cash follows the admin Cash Flow page: card payments plus wallet top-ups, minus withdrawals, inventory cost and marketing. Marketing here is the ad spend in this forecaster, which matches the admin marketing line within about 1%. Cash days are Toronto days and spend days are UTC days. Cash in is held at its run-rate even if you change the spend below, so cutting spend here does not reduce future cash in. Inventory cost is lumpy, so the 3-day and 7-day windows can swing the projection.';
+  $('cashNote').textContent='Net cash matches admin Net Cash After Marketing: card payments plus wallet top-ups, minus withdrawals, shipped card cost, payment processor fees and marketing (paid and UGC). Paid marketing here is the ad spend in this forecaster, which matches the admin marketing line within about 1%. Cash days are Toronto days and spend days are UTC days. Cash in is held at its run-rate even if you change the spend below, so cutting spend here does not reduce future cash in. This is cash after marketing only: it does not subtract salaries, G&A or servers, so it is not the change in the bank balance.';
   renderCashCum(M);
 }
 
