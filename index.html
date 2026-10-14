@@ -107,6 +107,8 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8
     <div class="controls" style="margin-top:12px">
       <label class="lbl" for="bank" id="bankLbl">Your bank balance (optional)</label>
       <input class="rr" style="width:140px" id="bank" type="number" step="1000" placeholder="e.g. 250000">
+      <label class="lbl" for="opex">Monthly overhead (salaries, G&amp;A, servers)</label>
+      <input class="rr" style="width:120px" id="opex" type="number" min="0" step="500" value="177500">
     </div>
     <div class="scroll"><table id="cashTbl"></table></div>
     <p class="note" id="cashNote"></p>
@@ -162,7 +164,7 @@ const planTotal=()=>PLAN.total;
 const gap=n=>{const r=Math.round(n);return r===0?'on plan':'<span class="'+(r>0?'over':'under')+'">'+(r>0?'+':'-')+money(Math.abs(r))+(r>0?' over':' under')+'</span>';};
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const days=DATA.map(r=>({d:r[0],v:r.slice(1,9),c:r.slice(9,14)}));
-const S={lb:'7',ov:{},cov:{},bank:null};
+const S={lb:'mtd',ov:{},cov:{},bank:null,opex:177500};
 const CASHL=['Cash in (card payments + wallet top-ups)','Withdrawals','Shipped card cost','Payment processor fees','UGC marketing'];
 const hasCash=x=>x.c[0]!=null;
 const cashOut=c=>c[1]+c[2]+c[3]+c[4];
@@ -205,8 +207,11 @@ function model(){
     const spendRate=sumV(used);
     const netMtd=cmtd[0]-cashOut(cmtd)-spendMtd;
     const netDay=cused[0]-cashOut(cused)-spendRate;
-    cash={lastDate:lc.d,cRem,cbase,cused,cmtd,spendMtd,spendRate,netMtd,netDay,netProj:netMtd+netDay*cRem,
-      pj:J.map(j=>cmtd[j]+cused[j]*cRem),pSpend:spendMtd+spendRate*cRem};
+    const lastN=+lc.d.slice(8,10),opexDay=S.opex/dim,opexMtd=opexDay*lastN;
+    const netProj=netMtd+netDay*cRem,netAfterDay=netDay-opexDay;
+    cash={lastDate:lc.d,cRem,cbase,cused,cmtd,spendMtd,spendRate,netMtd,netDay,netProj,
+      pj:J.map(j=>cmtd[j]+cused[j]*cRem),pSpend:spendMtd+spendRate*cRem,
+      opexDay,opexMtd,opexProj:opexMtd+opexDay*cRem,netAfterMtd:netMtd-opexMtd,netAfterDay,netAfterProj:netProj-(opexMtd+opexDay*cRem)};
   }
   return {last,key,dim,ld,logged,remaining,base,used,mtd,proj,cash,
     lo:Math.min(...range),hi:Math.max(...range)};
@@ -217,7 +222,7 @@ function renderMonths(M){
   days.forEach(x=>{const k=x.d.slice(0,7);(by[k]=by[k]||[]).push(x);});
   const keys=Object.keys(by).sort();
   let h='<thead><tr><th>Month</th>'+CH.map((c,i)=>'<th>'+swatch(i)+c.n+'</th>').join('')+
-    '<th>Total</th><th>Planned</th><th>vs plan</th><th>Net cash</th><th>Days</th><th>Avg / day</th><th></th></tr></thead><tbody>';
+    '<th>Total</th><th>Planned</th><th>vs plan</th><th>Net cash after marketing</th><th>Days</th><th>Avg / day</th><th></th></tr></thead><tbody>';
   const grand=CH.map(()=>0);let netGrand=0,netAny=false;
   const nc=n=>'<span class="'+(n>=0?'pos':'neg')+'">'+(n>=0?'+':'-')+money(Math.abs(n))+'</span>';
   keys.forEach(k=>{
@@ -299,15 +304,15 @@ function renderCash(M){
   card.hidden=false;
   const c=M.cash,sg=n=>(n>=0?'+':'-')+money(Math.abs(n));
   const out=cashOut(c.cmtd)+c.spendMtd,outRate=cashOut(c.cused)+c.spendRate;
-  const bankSet=S.bank!=null,projBank=bankSet?S.bank+c.netDay*c.cRem:0;
+  const bankSet=S.bank!=null,projBank=bankSet?S.bank+c.netAfterDay*c.cRem:0;
   $('cashTitle').textContent=mlabel(M.key)+' net cash';
   $('bankLbl').textContent='Your bank balance as of '+dlabel(c.lastDate)+' (optional)';
   const stat=(cls,l,v,s)=>'<div class="stat '+cls+'"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>';
   $('cashHero').innerHTML=
-    stat('','Net cash so far',sg(c.netMtd),'Through '+dlabel(c.lastDate)+': '+money(c.cmtd[0])+' in, '+money(out)+' out')+
-    stat('big','Projected month-end net cash',sg(c.netProj),'Run-rate '+sg(c.netDay)+' a day for '+c.cRem+' more day'+(c.cRem===1?'':'s'))+
-    stat('','Cash in vs out, per day',money(c.cused[0])+' vs '+money(outRate),'Run-rate going forward')+
-    stat('',bankSet?'Projected cash in bank, month-end':'Cash in bank',bankSet?money(projBank):'Enter balance',bankSet?'From '+money(S.bank)+' plus projected net cash':'Type your balance below');
+    stat('','Net cash so far, after marketing',sg(c.netMtd),'Through '+dlabel(c.lastDate)+': '+money(c.cmtd[0])+' in, '+money(out)+' out')+
+    stat('','Projected month-end, after marketing',sg(c.netProj),'Run-rate '+sg(c.netDay)+' a day for '+c.cRem+' more day'+(c.cRem===1?'':'s'))+
+    stat('big','Projected month-end, after overhead',sg(c.netAfterProj),'After '+money(S.opex)+' a month of overhead; '+sg(c.netAfterMtd)+' so far')+
+    stat('',bankSet?'Projected cash in bank, month-end':'Cash in bank',bankSet?money(projBank):'Enter balance',bankSet?'From '+money(S.bank)+' plus projected net cash after overhead':'Type your balance below');
   const lines=CASHL.map((l,j)=>[l,j]);
   let h='<thead><tr><th>Line</th><th>Month to date</th><th>Run-rate / day (editable)</th><th>Remaining days</th><th>Projected month-end</th></tr></thead><tbody>';
   lines.forEach(l=>{
@@ -315,14 +320,16 @@ function renderCash(M){
     h+='<tr><td>'+l[0]+'</td><td>'+money(c.cmtd[j])+'</td><td><input class="rr cr'+(edited?' edited':'')+'" type="number" min="0" step="100" data-j="'+j+'" value="'+Math.round(c.cused[j])+'" aria-label="'+l[0]+' daily run-rate"></td><td>'+money(c.cused[j]*c.cRem)+'</td><td class="proj">'+money(c.pj[j])+'</td></tr>';
   });
   h+='<tr><td>Ad spend (from the channel table below)</td><td>'+money(c.spendMtd)+'</td><td>'+money(c.spendRate)+'</td><td>'+money(c.spendRate*c.cRem)+'</td><td class="proj">'+money(c.pSpend)+'</td></tr>';
-  h+='<tr class="total"><td>Net cash</td><td>'+sg(c.netMtd)+'</td><td>'+sg(c.netDay)+'</td><td>'+sg(c.netDay*c.cRem)+'</td><td class="proj">'+sg(c.netProj)+'</td></tr></tbody>';
+  h+='<tr class="total"><td>Net cash after marketing</td><td>'+sg(c.netMtd)+'</td><td>'+sg(c.netDay)+'</td><td>'+sg(c.netDay*c.cRem)+'</td><td class="proj">'+sg(c.netProj)+'</td></tr>';
+  h+='<tr><td>Overhead (salaries, G&amp;A, servers)</td><td>'+money(c.opexMtd)+'</td><td>'+money(c.opexDay)+'</td><td>'+money(c.opexDay*c.cRem)+'</td><td class="proj">'+money(c.opexProj)+'</td></tr>';
+  h+='<tr class="total"><td>Net cash after overhead</td><td>'+sg(c.netAfterMtd)+'</td><td>'+sg(c.netAfterDay)+'</td><td>'+sg(c.netAfterDay*c.cRem)+'</td><td class="proj">'+sg(c.netAfterProj)+'</td></tr></tbody>';
   $('cashTbl').innerHTML=h;
   document.querySelectorAll('input.cr').forEach(el=>el.addEventListener('change',()=>{
     const j=+el.dataset.j,v=el.value===''?null:Math.max(0,Number(el.value));
     if(v==null||isNaN(v)||Math.round(c.cbase[j])===Math.round(v)){delete S.cov[j];}else{S.cov[j]=v;}
     render();
   }));
-  $('cashNote').textContent='Net cash matches admin Net Cash After Marketing: card payments plus wallet top-ups, minus withdrawals, shipped card cost, payment processor fees and marketing (paid and UGC). Paid marketing here is the ad spend in this forecaster, which matches the admin marketing line within about 1%. Cash days are Toronto days and spend days are UTC days. Cash in is held at its run-rate even if you change the spend below, so cutting spend here does not reduce future cash in. This is cash after marketing only: it does not subtract salaries, G&A or servers, so it is not the change in the bank balance.';
+  $('cashNote').textContent='Net cash matches admin Net Cash After Marketing: card payments plus wallet top-ups, minus withdrawals, shipped card cost, payment processor fees and marketing (paid and UGC). Paid marketing here is the ad spend in this forecaster, which matches the admin marketing line within about 1%. Cash days are Toronto days and spend days are UTC days. Cash in is held at its run-rate even if you change the spend below, so cutting spend here does not reduce future cash in. Overhead is the monthly figure above spread evenly across the days of the month. The after-marketing lines stop where admin Net Cash After Marketing stops; the after-overhead lines also subtract salaries, G&A and servers.';
   renderCashCum(M);
 }
 
@@ -332,9 +339,9 @@ function renderCashCum(M){
   const iw=W-L-R,ih=H-T-B;
   const map={};M.logged.forEach(x=>{if(hasCash(x))map[+x.d.slice(8,10)]=netOf(x);});
   const lastN=+c.lastDate.slice(8,10);
-  let run=0;const pts=[];
-  for(let n=1;n<=M.dim;n++){run+=n<=lastN?(map[n]||0):c.netDay;pts.push({n,v:run});}
-  const vals=pts.map(p=>p.v).concat([0]);
+  let run=0,run2=0;const pts=[],pts2=[];
+  for(let n=1;n<=M.dim;n++){run+=n<=lastN?(map[n]||0):c.netDay;run2+=(n<=lastN?(map[n]||0):c.netDay)-c.opexDay;pts.push({n,v:run});pts2.push({n,v:run2});}
+  const vals=pts.map(p=>p.v).concat(pts2.map(p=>p.v),[0]);
   const lo=Math.min(...vals),hi=Math.max(...vals),span=(hi-lo)||1;
   const mn=lo-span*0.08,mx=hi+span*0.08;
   const X=n=>L+(n-1)/(M.dim-1||1)*iw,Y=v=>T+ih-(v-mn)/(mx-mn)*ih;
@@ -343,13 +350,16 @@ function renderCashCum(M){
   for(let t=Math.ceil(mn/step)*step;t<=mx;t+=step){const y=Y(t);g+='<line class="grid" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+(t<0?'-':'')+short(Math.abs(t))+'</text>';}
   g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(0)+'" y2="'+Y(0)+'" stroke="var(--muted)" stroke-width="1.5"/>';
   const path=a=>a.map((p,i)=>(i?'L':'M')+X(p.n).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ');
+  g+='<path d="'+path(pts2)+'" fill="none" stroke="var(--over)" stroke-width="2" opacity="0.85"/>';
+  const e2=pts2[pts2.length-1];
+  g+='<text x="'+(X(e2.n)+8)+'" y="'+(Y(e2.v)+4)+'" style="fill:var(--over);font-weight:600;font-size:12px">'+(e2.v<0?'-':'')+short(Math.abs(e2.v))+'</text>';
   g+='<path d="'+path(pts.filter(p=>p.n>=lastN))+'" fill="none" stroke="var(--proj)" stroke-width="2.5" stroke-dasharray="6 4"/>';
   g+='<path d="'+path(pts.filter(p=>p.n<=lastN))+'" fill="none" stroke="var(--accent)" stroke-width="2.5"/>';
   const e=pts[pts.length-1],l=pts[lastN-1];
   g+='<circle cx="'+X(l.n)+'" cy="'+Y(l.v)+'" r="4" style="fill:var(--accent)"/>';
   g+='<circle cx="'+X(e.n)+'" cy="'+Y(e.v)+'" r="4" style="fill:var(--proj)"/><text x="'+(X(e.n)+8)+'" y="'+(Y(e.v)+4)+'" style="fill:var(--proj);font-weight:600;font-size:12px">'+(e.v<0?'-':'')+short(Math.abs(e.v))+'</text>';
   [1,5,10,15,20,25,M.dim].forEach(n=>{g+='<text x="'+X(n)+'" y="'+(H-8)+'" text-anchor="middle">'+n+'</text>';});
-  el.innerHTML='<div class="note" style="margin:0 0 4px">Cumulative net cash this month (solid is actual, dashed is projected)</div><svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Cumulative net cash">'+g+'</svg>';
+  el.innerHTML='<div class="note" style="margin:0 0 4px">Cumulative net cash this month: after marketing (blue solid is actual, gold dashed is projected) and after overhead (red line)</div><svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Cumulative net cash">'+g+'</svg>';
 }
 
 function series(M){
@@ -433,6 +443,7 @@ function render(){
 document.querySelectorAll('#lb button').forEach(b=>b.addEventListener('click',()=>{S.lb=b.dataset.lb;S.ov={};S.cov={};render();}));
 $('reset').addEventListener('click',()=>{S.ov={};S.cov={};render();});
 $('bank').addEventListener('input',e=>{S.bank=e.target.value===''?null:Number(e.target.value);render();});
+$('opex').addEventListener('input',e=>{const v=Number(e.target.value);S.opex=e.target.value===''||isNaN(v)?0:Math.max(0,v);render();});
 let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(render,150);});
 render();
 </script>
