@@ -165,7 +165,7 @@ const planTotal=()=>PLAN.total;
 const gap=n=>{const r=Math.round(n);return r===0?'on plan':'<span class="'+(r>0?'over':'under')+'">'+(r>0?'+':'-')+money(Math.abs(r))+(r>0?' over':' under')+'</span>';};
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const days=DATA.map(r=>({d:r[0],v:r.slice(1,9),c:r.slice(9,14)}));
-const S={lb:'mtd',ov:{},cov:{},bank:null,opex:177500};
+const S={lb:'7',ov:{},cov:{},bank:null,opex:177500};
 const CASHL=['Cash in (card payments + wallet top-ups)','Withdrawals','Shipped card cost','Payment processor fees','UGC marketing'];
 const hasCash=x=>x.c[0]!=null;
 const cashOut=c=>c[1]+c[2]+c[3]+c[4];
