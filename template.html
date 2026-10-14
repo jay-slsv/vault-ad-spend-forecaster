@@ -24,6 +24,8 @@
   --accent:#60a5fa;--accent-ink:#0b1020;--proj:#fbbf24;--proj-bg:#3a2e0b;
   --over:#f87171;--under:#4ade80;
 }
+.pos{color:var(--under);font-weight:600}
+.neg{color:var(--over);font-weight:600}
 .over{color:var(--over);font-weight:600}
 .under{color:var(--under);font-weight:600}
 *{box-sizing:border-box}
@@ -99,6 +101,18 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8
     <p class="note" id="planNote"></p>
   </section>
 
+  <section class="card" id="cashCard" hidden>
+    <h2 id="cashTitle">Net cash</h2>
+    <div class="hero" id="cashHero"></div>
+    <div class="controls" style="margin-top:12px">
+      <label class="lbl" for="bank" id="bankLbl">Your bank balance (optional)</label>
+      <input class="rr" style="width:140px" id="bank" type="number" step="1000" placeholder="e.g. 250000">
+    </div>
+    <div class="scroll"><table id="cashTbl"></table></div>
+    <p class="note" id="cashNote"></p>
+    <div id="cashcum" style="margin-top:12px"></div>
+  </section>
+
   <section class="card">
     <h2>Run-rate used for the remaining days</h2>
     <div class="controls">
@@ -133,7 +147,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8
     </details>
   </section>
 
-  <p class="note">Total paid spend across all eight channels. Source: Stadium Vault Ad Spend Tracker sheet (AppsFlyer cost for Meta, TikTok, ASA, Snapchat and Liftoff; Google Ads for Google, converted to USD), AppsFlyer cost for Point2Web ($12 per install, since Oct 1), and Winkle Lab's cost sheet ($25 per purchaser, since Oct 5). Winkle Lab days after their latest report are estimated from AppsFlyer purchaser counts and are replaced when they update. Meta has been $0 since the account was disabled on Sep 8.</p>
+  <p class="note">Total paid spend across all eight channels. Source: Stadium Vault Ad Spend Tracker sheet (AppsFlyer cost for Meta, TikTok, ASA, Snapchat and Liftoff; Google Ads for Google, converted to USD), AppsFlyer cost for Point2Web ($12 per install, since Oct 1), and Winkle Lab's cost sheet ($25 per purchaser, since Oct 5). Winkle Lab days after their latest report are estimated from AppsFlyer purchaser counts and are replaced when they update. Meta has been $0 since the account was disabled on Sep 8. Cash in, withdrawals and inventory cost come from the analytics database using the admin Cash Flow definitions.</p>
 </div>
 
 <script>
@@ -147,8 +161,11 @@ const PLAN={key:'2026-10',total:600000};
 const planTotal=()=>PLAN.total;
 const gap=n=>{const r=Math.round(n);return r===0?'on plan':'<span class="'+(r>0?'over':'under')+'">'+(r>0?'+':'-')+money(Math.abs(r))+(r>0?' over':' under')+'</span>';};
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
-const days=DATA.map(r=>({d:r[0],v:r.slice(1)}));
-const S={lb:'7',ov:{}};
+const days=DATA.map(r=>({d:r[0],v:r.slice(1,9),c:r.slice(9,12)}));
+const S={lb:'7',ov:{},cov:{},bank:null};
+const CASHL=['Cash in (card payments + wallet top-ups)','Withdrawals','Inventory cost'];
+const hasCash=x=>x.c[0]!=null;
+const netOf=x=>x.c[0]-x.c[1]-x.c[2]-sumV(x.v);
 const $=id=>document.getElementById(id);
 const money=n=>'$'+Math.round(n).toLocaleString('en-US');
 const short=n=>n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1e3?'$'+(n/1e3).toFixed(n>=1e4?0:1)+'k':'$'+Math.round(n);
@@ -173,7 +190,23 @@ function model(){
   const mtd=CH.map((_,i)=>colSum(logged,i));
   const proj=mtd.map((a,i)=>a+used[i]*remaining);
   const range=['3','7','14','mtd'].map(lb=>CH.reduce((t,_,i)=>t+mtd[i]+colAvg(win(lb),i)*remaining,0));
-  return {last,key,dim,ld,logged,remaining,base,used,mtd,proj,
+  const cashDays=logged.filter(hasCash);
+  let cash=null;
+  if(cashDays.length){
+    const lc=cashDays[cashDays.length-1],cRem=dim-(+lc.d.slice(8,10));
+    const cwin=S.lb==='mtd'?cashDays:days.filter(hasCash).slice(-Number(S.lb));
+    const cAvg=j=>cwin.length?cwin.reduce((a,x)=>a+x.c[j],0)/cwin.length:0;
+    const cbase=[0,1,2].map(cAvg);
+    const cused=cbase.map((b,j)=>S.cov[j]!=null?S.cov[j]:b);
+    const cmtd=[0,1,2].map(j=>cashDays.reduce((a,x)=>a+x.c[j],0));
+    const spendMtd=cashDays.reduce((a,x)=>a+sumV(x.v),0);
+    const spendRate=sumV(used);
+    const netMtd=cmtd[0]-cmtd[1]-cmtd[2]-spendMtd;
+    const netDay=cused[0]-cused[1]-cused[2]-spendRate;
+    cash={lastDate:lc.d,cRem,cbase,cused,cmtd,spendMtd,spendRate,netMtd,netDay,netProj:netMtd+netDay*cRem,
+      pj:[0,1,2].map(j=>cmtd[j]+cused[j]*cRem),pSpend:spendMtd+spendRate*cRem};
+  }
+  return {last,key,dim,ld,logged,remaining,base,used,mtd,proj,cash,
     lo:Math.min(...range),hi:Math.max(...range)};
 }
 
@@ -182,8 +215,9 @@ function renderMonths(M){
   days.forEach(x=>{const k=x.d.slice(0,7);(by[k]=by[k]||[]).push(x);});
   const keys=Object.keys(by).sort();
   let h='<thead><tr><th>Month</th>'+CH.map((c,i)=>'<th>'+swatch(i)+c.n+'</th>').join('')+
-    '<th>Total</th><th>Planned</th><th>vs plan</th><th>Days</th><th>Avg / day</th><th></th></tr></thead><tbody>';
-  const grand=CH.map(()=>0);
+    '<th>Total</th><th>Planned</th><th>vs plan</th><th>Net cash</th><th>Days</th><th>Avg / day</th><th></th></tr></thead><tbody>';
+  const grand=CH.map(()=>0);let netGrand=0,netAny=false;
+  const nc=n=>'<span class="'+(n>=0?'pos':'neg')+'">'+(n>=0?'+':'-')+money(Math.abs(n))+'</span>';
   keys.forEach(k=>{
     const rows=by[k],cur=k===M.key;
     const vals=CH.map((_,i)=>rows.reduce((a,x)=>a+x.v[i],0));
@@ -191,17 +225,21 @@ function renderMonths(M){
     const shown=cur?M.proj:vals;
     const tot=sumV(shown);
     const dcount=cur?M.dim:rows.length;
+    const cRows=rows.filter(hasCash);
+    const netK=cur&&M.cash?M.cash.netProj:cRows.reduce((a,x)=>a+netOf(x),0);
+    if(cRows.length){netAny=true;netGrand+=cRows.reduce((a,x)=>a+netOf(x),0);}
+    const netCell=cRows.length?'<td'+(cur?' class="proj"':'')+'>'+nc(netK)+'</td>':'<td></td>';
     h+='<tr'+(cur?' class="cur"':'')+'><td>'+mlabel(k)+'</td>'+
       shown.map(v=>'<td'+(cur?' class="proj"':'')+'>'+money(v)+'</td>').join('')+
       '<td>'+money(tot)+'</td>'+(k===PLAN.key?'<td>'+money(planTotal())+'</td><td>'+gap(tot-planTotal())+'</td>':'<td></td><td></td>')+
-      '<td>'+(cur?M.ld+' of '+M.dim:rows.length)+'</td><td>'+money(tot/dcount)+'</td>'+
+      netCell+'<td>'+(cur?M.ld+' of '+M.dim:rows.length)+'</td><td>'+money(tot/dcount)+'</td>'+
       '<td>'+(cur?'<span class="tag p">projected</span>':'<span class="tag">final</span>')+'</td></tr>';
   });
   const gt=sumV(grand);
   h+='<tr class="total"><td>Actual to date</td>'+grand.map(v=>'<td>'+money(v)+'</td>').join('')+
-    '<td>'+money(gt)+'</td><td></td><td></td><td>'+days.length+'</td><td>'+money(gt/days.length)+'</td><td></td></tr></tbody>';
+    '<td>'+money(gt)+'</td><td></td><td></td><td>'+(netAny?nc(netGrand):'')+'</td><td>'+days.length+'</td><td>'+money(gt/days.length)+'</td><td></td></tr></tbody>';
   $('months').innerHTML=h;
-  $('monthsNote').textContent=mlabel(M.key)+' shows the projected month-end figure (actual so far plus run-rate for the remaining days). May is a partial month starting May 2.';
+  $('monthsNote').textContent=mlabel(M.key)+' shows the projected month-end figure (actual so far plus run-rate for the remaining days). May is a partial month starting May 2. Net cash is cash in minus withdrawals, inventory cost and ad spend.';
 }
 
 function renderHero(M){
@@ -253,13 +291,74 @@ function renderChannels(M){
   }));
 }
 
+function renderCash(M){
+  const card=$('cashCard');
+  if(!M.cash){card.hidden=true;return;}
+  card.hidden=false;
+  const c=M.cash,sg=n=>(n>=0?'+':'-')+money(Math.abs(n));
+  const out=c.cmtd[1]+c.cmtd[2]+c.spendMtd,outRate=c.cused[1]+c.cused[2]+c.spendRate;
+  const bankSet=S.bank!=null,projBank=bankSet?S.bank+c.netDay*c.cRem:0;
+  $('cashTitle').textContent=mlabel(M.key)+' net cash';
+  $('bankLbl').textContent='Your bank balance as of '+dlabel(c.lastDate)+' (optional)';
+  const stat=(cls,l,v,s)=>'<div class="stat '+cls+'"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>';
+  $('cashHero').innerHTML=
+    stat('','Net cash so far',sg(c.netMtd),'Through '+dlabel(c.lastDate)+': '+money(c.cmtd[0])+' in, '+money(out)+' out')+
+    stat('big','Projected month-end net cash',sg(c.netProj),'Run-rate '+sg(c.netDay)+' a day for '+c.cRem+' more day'+(c.cRem===1?'':'s'))+
+    stat('','Cash in vs out, per day',money(c.cused[0])+' vs '+money(outRate),'Run-rate going forward')+
+    stat('',bankSet?'Projected cash in bank, month-end':'Cash in bank',bankSet?money(projBank):'Enter balance',bankSet?'From '+money(S.bank)+' plus projected net cash':'Type your balance below');
+  const lines=[['Cash in (card payments + wallet top-ups)',0,1],['Withdrawals',1,-1],['Inventory cost',2,-1]];
+  let h='<thead><tr><th>Line</th><th>Month to date</th><th>Run-rate / day (editable)</th><th>Remaining days</th><th>Projected month-end</th></tr></thead><tbody>';
+  lines.forEach(l=>{
+    const j=l[1],edited=S.cov[j]!=null;
+    h+='<tr><td>'+l[0]+'</td><td>'+money(c.cmtd[j])+'</td><td><input class="rr cr'+(edited?' edited':'')+'" type="number" min="0" step="100" data-j="'+j+'" value="'+Math.round(c.cused[j])+'" aria-label="'+l[0]+' daily run-rate"></td><td>'+money(c.cused[j]*c.cRem)+'</td><td class="proj">'+money(c.pj[j])+'</td></tr>';
+  });
+  h+='<tr><td>Ad spend (from the channel table below)</td><td>'+money(c.spendMtd)+'</td><td>'+money(c.spendRate)+'</td><td>'+money(c.spendRate*c.cRem)+'</td><td class="proj">'+money(c.pSpend)+'</td></tr>';
+  h+='<tr class="total"><td>Net cash</td><td>'+sg(c.netMtd)+'</td><td>'+sg(c.netDay)+'</td><td>'+sg(c.netDay*c.cRem)+'</td><td class="proj">'+sg(c.netProj)+'</td></tr></tbody>';
+  $('cashTbl').innerHTML=h;
+  document.querySelectorAll('input.cr').forEach(el=>el.addEventListener('change',()=>{
+    const j=+el.dataset.j,v=el.value===''?null:Math.max(0,Number(el.value));
+    if(v==null||isNaN(v)||Math.round(c.cbase[j])===Math.round(v)){delete S.cov[j];}else{S.cov[j]=v;}
+    render();
+  }));
+  $('cashNote').textContent='Net cash follows the admin Cash Flow page: card payments plus wallet top-ups, minus withdrawals, inventory cost and marketing. Marketing here is the ad spend in this forecaster, which matches the admin marketing line within about 1%. Cash days are Toronto days and spend days are UTC days. Cash in is held at its run-rate even if you change the spend below, so cutting spend here does not reduce future cash in. Inventory cost is lumpy, so the 3-day and 7-day windows can swing the projection.';
+  renderCashCum(M);
+}
+
+function renderCashCum(M){
+  const c=M.cash,el=$('cashcum');
+  const W=Math.max(320,el.clientWidth||800),H=240,L=64,R=70,T=14,B=26;
+  const iw=W-L-R,ih=H-T-B;
+  const map={};M.logged.forEach(x=>{if(hasCash(x))map[+x.d.slice(8,10)]=netOf(x);});
+  const lastN=+c.lastDate.slice(8,10);
+  let run=0;const pts=[];
+  for(let n=1;n<=M.dim;n++){run+=n<=lastN?(map[n]||0):c.netDay;pts.push({n,v:run});}
+  const vals=pts.map(p=>p.v).concat([0]);
+  const lo=Math.min(...vals),hi=Math.max(...vals),span=(hi-lo)||1;
+  const mn=lo-span*0.08,mx=hi+span*0.08;
+  const X=n=>L+(n-1)/(M.dim-1||1)*iw,Y=v=>T+ih-(v-mn)/(mx-mn)*ih;
+  const raw=(mx-mn)/5,mag=Math.pow(10,Math.floor(Math.log10(raw))),step=Math.ceil(raw/mag)*mag;
+  let g='';
+  for(let t=Math.ceil(mn/step)*step;t<=mx;t+=step){const y=Y(t);g+='<line class="grid" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+(t<0?'-':'')+short(Math.abs(t))+'</text>';}
+  g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(0)+'" y2="'+Y(0)+'" stroke="var(--muted)" stroke-width="1.5"/>';
+  const path=a=>a.map((p,i)=>(i?'L':'M')+X(p.n).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ');
+  g+='<path d="'+path(pts.filter(p=>p.n>=lastN))+'" fill="none" stroke="var(--proj)" stroke-width="2.5" stroke-dasharray="6 4"/>';
+  g+='<path d="'+path(pts.filter(p=>p.n<=lastN))+'" fill="none" stroke="var(--accent)" stroke-width="2.5"/>';
+  const e=pts[pts.length-1],l=pts[lastN-1];
+  g+='<circle cx="'+X(l.n)+'" cy="'+Y(l.v)+'" r="4" style="fill:var(--accent)"/>';
+  g+='<circle cx="'+X(e.n)+'" cy="'+Y(e.v)+'" r="4" style="fill:var(--proj)"/><text x="'+(X(e.n)+8)+'" y="'+(Y(e.v)+4)+'" style="fill:var(--proj);font-weight:600;font-size:12px">'+(e.v<0?'-':'')+short(Math.abs(e.v))+'</text>';
+  [1,5,10,15,20,25,M.dim].forEach(n=>{g+='<text x="'+X(n)+'" y="'+(H-8)+'" text-anchor="middle">'+n+'</text>';});
+  el.innerHTML='<div class="note" style="margin:0 0 4px">Cumulative net cash this month (solid is actual, dashed is projected)</div><svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Cumulative net cash">'+g+'</svg>';
+}
+
 function series(M){
-  const map={};M.logged.forEach(x=>map[x.d]=x.v);
+  const map={};M.logged.forEach(x=>map[x.d]=x);
   const out=[];
   for(let d=1;d<=M.dim;d++){
     const ds=M.key+'-'+pad(d);
-    const actual=d<=M.ld;
-    out.push({d:ds,n:d,actual,v:actual?(map[ds]||CH.map(()=>0)):M.used});
+    const actual=d<=M.ld,rec=map[ds];
+    let net=null;
+    if(M.cash){if(actual){if(rec&&hasCash(rec))net=netOf(rec);}else net=M.cash.netDay;}
+    out.push({d:ds,n:d,actual,v:actual?(rec?rec.v:CH.map(()=>0)):M.used,net});
   }
   return out;
 }
@@ -312,13 +411,13 @@ function renderCum(M,ser){
 }
 
 function renderDaily(M,ser){
-  let h='<thead><tr><th>Date</th>'+CH.map((c,i)=>'<th>'+swatch(i)+c.n+'</th>').join('')+'<th>Total</th><th>Cumulative</th><th></th></tr></thead><tbody>';
+  let h='<thead><tr><th>Date</th>'+CH.map((c,i)=>'<th>'+swatch(i)+c.n+'</th>').join('')+'<th>Total</th><th>Cumulative</th><th>Net cash</th><th></th></tr></thead><tbody>';
   let c=0;
   ser.forEach(s=>{
     const t=sumV(s.v);c+=t;
     h+='<tr'+(s.actual?'':' style="opacity:.75"')+'><td>'+dlabel(s.d)+'</td>'+
       s.v.map(v=>'<td'+(s.actual?'':' class="proj"')+'>'+money(v)+'</td>').join('')+
-      '<td>'+money(t)+'</td><td>'+money(c)+'</td><td><span class="tag'+(s.actual?'':' p')+'">'+(s.actual?'actual':'projected')+'</span></td></tr>';
+      '<td>'+money(t)+'</td><td>'+money(c)+'</td><td'+(s.actual?'':' class="proj"')+'>'+(s.net==null?'':'<span class="'+(s.net>=0?'pos':'neg')+'">'+(s.net>=0?'+':'-')+money(Math.abs(s.net))+'</span>')+'</td><td><span class="tag'+(s.actual?'':' p')+'">'+(s.actual?'actual':'projected')+'</span></td></tr>';
   });
   $('daily').innerHTML=h+'</tbody>';
 }
@@ -327,10 +426,11 @@ function render(){
   const M=model(),ser=series(M);
   $('asof').textContent='Data through '+dlabel(M.last.d)+', '+M.last.d.slice(0,4)+' ('+days.length+' days logged)';
   document.querySelectorAll('#lb button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lb===S.lb)));
-  renderMonths(M);renderHero(M);renderPlan(M);renderChannels(M);renderBars(M,ser);renderCum(M,ser);renderDaily(M,ser);
+  renderMonths(M);renderHero(M);renderPlan(M);renderCash(M);renderChannels(M);renderBars(M,ser);renderCum(M,ser);renderDaily(M,ser);
 }
-document.querySelectorAll('#lb button').forEach(b=>b.addEventListener('click',()=>{S.lb=b.dataset.lb;S.ov={};render();}));
-$('reset').addEventListener('click',()=>{S.ov={};render();});
+document.querySelectorAll('#lb button').forEach(b=>b.addEventListener('click',()=>{S.lb=b.dataset.lb;S.ov={};S.cov={};render();}));
+$('reset').addEventListener('click',()=>{S.ov={};S.cov={};render();});
+$('bank').addEventListener('input',e=>{S.bank=e.target.value===''?null:Number(e.target.value);render();});
 let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(render,150);});
 render();
 </script>

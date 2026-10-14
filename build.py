@@ -1,13 +1,13 @@
-import csv
 import json
-from pathlib import Path
 
-here = Path(__file__).parent
+import store
+
+here = store.here
 rows = []
-for r in list(csv.reader(open(here / "spend.csv")))[1:]:
-    vals = [float(x) for x in r[1:]] + [0.0] * (8 - len(r[1:]))
-    rows.append([r[0]] + vals)
-rows.sort(key=lambda r: r[0])
+for date, r in sorted(store.load().items()):
+    spend = [float(x or 0) for x in r[1:9]]
+    cash = [float(x) if x != "" else None for x in r[9:12]]
+    rows.append([date] + spend + cash)
 html = (here / "template.html").read_text().replace("/*DATA*/[]", json.dumps(rows, separators=(",", ":")))
 (here / "index.html").write_text(html)
 print(f"built index.html with {len(rows)} days, last {rows[-1][0]}")
