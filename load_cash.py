@@ -27,9 +27,9 @@ for r in data:
         store.num(r["fees"]),
         store.num(r["ugc_marketing"]),
     ]
-    if row[9:14] != new:
+    if row[10:15] != new:
         updated.append(r["day"])
-    row[9:14] = new
+    row[10:15] = new
 store.save(rows)
 print("cash updated:", len(updated), "last:", updated[-1] if updated else "none")
 print("skipped (no spend row yet):", skipped)

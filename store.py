@@ -1,6 +1,6 @@
 """Shared reader/writer for spend.csv.
 
-Columns: date, 8 spend channels, then 5 cash columns that mirror admin's Net Cash After Marketing:
+Columns: date, 9 spend channels, then 5 cash columns that mirror admin's Net Cash After Marketing:
 cashin (card payments + wallet top-ups), withdrawals, shipped (shipped card cost),
 fees (payment processor fees), ugc (UGC marketing).
 Cash columns are blank for days that have no cash data yet.
@@ -10,9 +10,9 @@ from pathlib import Path
 
 here = Path(__file__).parent
 CSV = here / "spend.csv"
-NCOLS = 14
+NCOLS = 15
 HEADER = [
-    "date", "meta", "tiktok", "asa", "snapchat", "liftoff", "google", "point2web", "winklelab",
+    "date", "meta", "tiktok", "asa", "snapchat", "liftoff", "google", "point2web", "winklelab", "smadex",
     "cashin", "withdrawals", "shipped", "fees", "ugc",
 ]
 

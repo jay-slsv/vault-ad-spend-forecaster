@@ -10,7 +10,7 @@
   --bg:#f5f6f8;--surface:#ffffff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--soft:#f1f5f9;
   --accent:#2563eb;--accent-ink:#ffffff;--proj:#b45309;--proj-bg:#fef3c7;
   --over:#b91c1c;--under:#15803d;
-  --c-meta:#3b82f6;--c-tiktok:#14b8a6;--c-asa:#94a3b8;--c-snap:#f59e0b;--c-liftoff:#8b5cf6;--c-google:#f43f5e;--c-point2web:#84cc16;--c-winklelab:#ec4899;
+  --c-meta:#3b82f6;--c-tiktok:#14b8a6;--c-asa:#94a3b8;--c-snap:#f59e0b;--c-liftoff:#8b5cf6;--c-google:#f43f5e;--c-point2web:#84cc16;--c-winklelab:#ec4899;--c-smadex:#0ea5e9;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
@@ -150,21 +150,21 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8
     </details>
   </section>
 
-  <p class="note">Total paid spend across all eight channels. Source: Stadium Vault Ad Spend Tracker sheet (AppsFlyer cost for Meta, TikTok, ASA, Snapchat and Liftoff; Google Ads for Google, converted to USD), AppsFlyer cost for Point2Web ($12 per install, since Oct 1), and Winkle Lab's cost sheet ($25 per purchaser, since Oct 5). Winkle Lab days after their latest report are estimated from AppsFlyer purchaser counts and are replaced when they update. Meta has been $0 since the account was disabled on Sep 8. Cash in, withdrawals, shipped card cost, processor fees and UGC marketing come from the analytics database and match the admin Cash Flow page (Net Cash After Marketing).</p>
+  <p class="note">Total paid spend across all nine channels. Source: Stadium Vault Ad Spend Tracker sheet (AppsFlyer cost for Meta, TikTok, ASA, Snapchat and Liftoff; Google Ads for Google, converted to USD), AppsFlyer cost for Point2Web ($12 per install, since Oct 1), Smadex cost from AppsFlyer (since Oct 16), and Winkle Lab's cost sheet ($25 per purchaser, since Oct 5). Winkle Lab days after their latest report are estimated from AppsFlyer purchaser counts and are replaced when they update. Meta has been $0 since the account was disabled on Sep 8. Cash in, withdrawals, shipped card cost, processor fees and UGC marketing come from the analytics database and match the admin Cash Flow page (Net Cash After Marketing).</p>
 </div>
 
 <script>
 const CH=[
   {k:'meta',n:'Meta'},{k:'tiktok',n:'TikTok'},{k:'asa',n:'Apple Search Ads'},
   {k:'snap',n:'Snapchat'},{k:'liftoff',n:'Liftoff'},{k:'google',n:'Google'},
-  {k:'point2web',n:'Point2Web'},{k:'winklelab',n:'Winkle Lab'}
+  {k:'point2web',n:'Point2Web'},{k:'winklelab',n:'Winkle Lab'},{k:'smadex',n:'Smadex'}
 ];
 const DATA=/*DATA*/[];
 const PLAN={key:'2026-10',total:600000};
 const planTotal=()=>PLAN.total;
 const gap=n=>{const r=Math.round(n);return r===0?'on plan':'<span class="'+(r>0?'over':'under')+'">'+(r>0?'+':'-')+money(Math.abs(r))+(r>0?' over':' under')+'</span>';};
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
-const days=DATA.map(r=>({d:r[0],v:r.slice(1,9),c:r.slice(9,14)}));
+const days=DATA.map(r=>({d:r[0],v:r.slice(1,10),c:r.slice(10,15)}));
 const S={lb:'7',ov:{},cov:{},bank:null,opex:177500};
 const CASHL=['Cash in (card payments + wallet top-ups)','Withdrawals','Shipped card cost','Payment processor fees','UGC marketing'];
 const hasCash=x=>x.c[0]!=null;
