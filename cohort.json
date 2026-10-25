@@ -1,0 +1,162 @@
+{
+  "asof": "2026-10-23",
+  "window": "Install cohorts Oct 9 to Oct 21 (UTC) for D1; Oct 9 to Oct 15 for D7 (only fully matured days). AppsFlyer id6756682207, af_purchase only (gross, no withdrawals).",
+  "ch": {
+    "tiktok": {
+      "cost": 181112.32,
+      "inst": 8256,
+      "rev0": 118500.64,
+      "rev1": 135576.32,
+      "m7": {
+        "inst": 4815,
+        "rev1": 84777.73,
+        "rev7": 107273.77
+      }
+    },
+    "google": {
+      "cost": 45645.19,
+      "inst": 2311,
+      "rev0": 30809.32,
+      "rev1": 35772.61,
+      "m7": {
+        "inst": 1231,
+        "rev1": 15627.77,
+        "rev7": 20956.59
+      }
+    },
+    "liftoff": {
+      "cost": 45039.46,
+      "inst": 2055,
+      "rev0": 23651.64,
+      "rev1": 27474.26,
+      "m7": {
+        "inst": 1223,
+        "rev1": 16079.83,
+        "rev7": 21528.44
+      }
+    },
+    "smadex": {
+      "cost": 5081.05,
+      "inst": 166,
+      "rev0": 972.0,
+      "rev1": 1204.0,
+      "m7": null
+    },
+    "meta": {
+      "cost": 3378.33,
+      "inst": 289,
+      "rev0": 692.0,
+      "rev1": 866.0,
+      "m7": {
+        "inst": 43,
+        "rev1": 341.0,
+        "rev7": 436.0
+      }
+    },
+    "point2web": {
+      "cost": 2988.0,
+      "inst": 249,
+      "rev0": 956.43,
+      "rev1": 1011.43,
+      "m7": {
+        "inst": 99,
+        "rev1": 571.43,
+        "rev7": 737.43
+      }
+    },
+    "asa": {
+      "cost": 2795.77,
+      "inst": 451,
+      "rev0": 6474.74,
+      "rev1": 6704.74,
+      "m7": {
+        "inst": 242,
+        "rev1": 4656.65,
+        "rev7": 4826.72
+      }
+    },
+    "snap": {
+      "cost": 2649.48,
+      "inst": 240,
+      "rev0": 2893.99,
+      "rev1": 3239.99,
+      "m7": {
+        "inst": 135,
+        "rev1": 2101.99,
+        "rev7": 2679.45
+      }
+    },
+    "winklelab": {
+      "cost": 2150.0,
+      "inst": 0,
+      "rev0": 0,
+      "rev1": 0,
+      "m7": null
+    }
+  },
+  "all": {
+    "inst": 18787,
+    "rev0": 301675.68,
+    "rev1": 363798.97,
+    "m7": {
+      "inst": 10438,
+      "rev1": 202088.29,
+      "rev7": 256165.91
+    }
+  },
+  "db": {
+    "note": "Analytics replica, Toronto signup days, all sources. net = cash in (card + wallet top-ups) minus withdrawals, shipped card cost, payment fees. Same definition as the net cash section.",
+    "hist": {
+      "label": "Signups Jul 20 to Aug 23 (86,562 users, full D60)",
+      "age": [
+        1,
+        3,
+        7,
+        14,
+        21,
+        30,
+        45,
+        60
+      ],
+      "gross": [
+        1522970,
+        1715434,
+        1960023,
+        2235708,
+        2410396,
+        2580164,
+        2742357,
+        2853108
+      ],
+      "net": [
+        663680,
+        729935,
+        833351,
+        944026,
+        1008852,
+        1083595,
+        1156012,
+        1204431
+      ]
+    },
+    "recent": {
+      "label": "Signups Oct 9 to Oct 21 (17,832 users, D1 matured; D7 from Oct 9 to Oct 15)",
+      "d1gross": 350209,
+      "d1net": 144350,
+      "e_d1gross": 204929,
+      "e_d1net": 80646,
+      "e_d7gross": 256139,
+      "e_d7net": 98335,
+      "tail": {
+        "30": 0.247,
+        "45": 0.29,
+        "60": 0.318
+      },
+      "tailLowHigh60": [
+        0.28,
+        0.48
+      ],
+      "note": "Net cash per $1 of D1 gross added after D1, fitted on Oct 9 to 22 signups only (daily increments D2 to D13, exponential decay fit, D60 = 0.73 cumulative; fit range 0.69 to 0.89). D30 and D45 scaled from the Jul-Aug shape."
+    }
+  }
+}
