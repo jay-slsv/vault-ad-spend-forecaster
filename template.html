@@ -394,6 +394,8 @@ function cohModel(M){
   const tailScale=1;
   const a=COH.all.m7,blend=a.rev7/a.rev1-1;
   const total=sumV(M.proj),load=total?S.opex/total:0;
+  const pd=CH.map(c=>COH.ch[c.k]).filter(d=>d&&d.rev1>0);
+  const blendNet=pd.reduce((a,d)=>a+d.net1,0)/(pd.reduce((a,d)=>a+d.rev1,0)||1);
   const rows=CH.map((c,i)=>{
     const d=COH.ch[c.k];
     const has=d&&d.cost>0&&d.rev1>0;
@@ -406,8 +408,10 @@ function cohModel(M){
     const orgOn=S.chOrg[i]!=null?S.chOrg[i]:S.org,admOn=S.chAdm[i]!=null?S.chAdm[i]:S.adm;
     const org=orgOn?1+S.orgPct/100:1,ld=admOn?load:0;
     const need=(1+ld)/(mult*org);
+    const nr=has&&d.inst>=500?d.net1/d.rev1:blendNet;
+    const needNet=need*nr,netNow=has?d.net1/d.cost:null;
     const profit=use==null?null:use*mult*org-1-ld;
-    return {i,c,d,has,now,use,thin,d7d1,t,mult,orgOn,admOn,need,profit,rate:M.used[i]};
+    return {i,c,d,has,now,use,thin,d7d1,t,mult,orgOn,admOn,need,nr,needNet,netNow,profit,rate:M.used[i]};
   });
   return {rows,m1,histTail,tailScale,load,blend};
 }
@@ -422,18 +426,18 @@ function renderCohort(M){
   const stat=(cls,l,v,s)=>'<div class="stat '+cls+'"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>';
   $('cohHero').innerHTML=
     stat('big','Required paid D1 ROAS, spend-weighted',wNeed.toFixed(2),'To break even by D'+S.beDay+' on net cash'+(S.adm?', admin loaded':'')+(S.org?', +'+S.orgPct+'% organic':''))+
-    stat('','Paid D1 ROAS now (attributed)',(paidRev/paidCost).toFixed(2),'Oct 9 to 21 installs, '+short(paidCost)+' paid cost, gross af_purchase')+
+    stat('','Paid D1 ROAS now (attributed)',(paidRev/paidCost).toFixed(2),'Oct 10 to 23 installs, '+short(paidCost)+' paid cost, gross af_purchase')+
     stat('','Net cash per $1 of D1 gross, D'+S.beDay,K.rows[1].mult.toFixed(2),'TikTok curve; D1 alone is '+K.m1.toFixed(2))+
     stat('','Admin load on CAC','+'+Math.round(K.load*100)+'%',money(S.opex)+' a month over '+short(sumV(M.proj))+' projected paid spend');
-  let h='<thead><tr><th>Channel</th><th>Spend / day</th><th>Installs</th><th>D1 ROAS now (editable)</th><th>D7 / D1</th><th>Net per $ D1 gross</th><th>Organic</th><th>Admin</th><th>Required D1 ROAS</th><th>Required D7 ROAS</th><th>Gap</th><th>D'+S.beDay+' profit per $1 spent</th><th>Per day at run-rate</th></tr></thead><tbody>';
+  let h='<thead><tr><th>Channel</th><th>Spend / day</th><th>Installs</th><th>D1 gross ROAS now (editable)</th><th>D1 net ROAS now</th><th>D7 / D1</th><th>Net per $ D1 gross</th><th>Organic</th><th>Admin</th><th>Required D1 gross</th><th>Required D1 net</th><th>Required D7 gross</th><th>Gap</th><th>D'+S.beDay+' profit per $1 spent</th><th>Per day at run-rate</th></tr></thead><tbody>';
   K.rows.forEach(r=>{
     const edited=S.roas[r.i]!=null;
     const gap=r.use==null?'':'<span class="'+(r.use>=r.need?'pos':'neg')+'">'+(r.use>=r.need?'+':'-')+Math.abs(r.use-r.need).toFixed(2)+'</span>';
     h+='<tr><td>'+swatch(r.i)+r.c.n+(r.thin&&r.has?' <span class="tag">thin D7</span>':'')+'</td><td>'+money(r.rate)+'</td><td>'+(r.d?r.d.inst.toLocaleString('en-US'):'')+'</td>'+
       '<td>'+(r.has?'<input class="rr co'+(edited?' edited':'')+'" type="number" min="0" step="0.05" data-i="'+r.i+'" value="'+r.use.toFixed(2)+'" aria-label="'+r.c.n+' D1 ROAS" style="width:70px">':'<span class="tag">no AF data</span>')+'</td>'+
-      '<td>'+(r.d7d1?r.d7d1.toFixed(2):'')+'</td><td>'+r.mult.toFixed(2)+'</td>'+
+      '<td>'+(r.netNow==null?'':r.netNow.toFixed(2))+'</td><td>'+(r.d7d1?r.d7d1.toFixed(2):'')+'</td><td>'+r.mult.toFixed(2)+'</td>'+
       '<td><input type="checkbox" class="cho" data-i="'+r.i+'"'+(r.orgOn?' checked':'')+'></td><td><input type="checkbox" class="cha" data-i="'+r.i+'"'+(r.admOn?' checked':'')+'></td>'+
-      '<td class="proj"><b>'+r.need.toFixed(2)+'</b></td><td>'+(r.d7d1&&!r.thin?(r.need*r.d7d1).toFixed(2):'')+'</td><td>'+gap+'</td>'+
+      '<td class="proj"><b>'+r.need.toFixed(2)+'</b></td><td class="proj"><b>'+r.needNet.toFixed(2)+'</b></td><td>'+(r.d7d1&&!r.thin?(r.need*r.d7d1).toFixed(2):'')+'</td><td>'+gap+'</td>'+
       '<td>'+(r.profit==null?'':'<span class="'+(r.profit>=0?'pos':'neg')+'">'+sg(r.profit)+'</span>')+'</td>'+
       '<td>'+(r.profit==null?'':'<span class="'+(r.profit>=0?'pos':'neg')+'">'+(r.profit*r.rate>=0?'+':'-')+money(Math.abs(r.profit*r.rate))+'</span>')+'</td></tr>';
   });
@@ -442,7 +446,7 @@ function renderCohort(M){
   document.querySelectorAll('input.cho').forEach(el=>el.addEventListener('change',()=>{S.chOrg[+el.dataset.i]=el.checked;render();}));
   document.querySelectorAll('input.cha').forEach(el=>el.addEventListener('change',()=>{S.chAdm[+el.dataset.i]=el.checked;render();}));
   document.querySelectorAll('#beDay button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.d===S.beDay)));
-  $('cohNote').textContent='Required D1 ROAS = (1 + admin load) / (net cash per $1 of D1 gross by D'+S.beDay+' x (1 + organic uplift)). Net cash per $1 of D1 gross = '+K.m1.toFixed(2)+' already netted at D1 (recent Oct 9 to 21 cohorts) plus '+(K.histTail*K.tailScale).toFixed(2)+' of later net cash ('+(S.rec?'extrapolated from Oct 9 to 22 signups only, decay fit':'from the Jul 20 to Aug 23 cohorts')+'), scaled by the channel D7/D1 growth vs the blended '+(1+K.blend).toFixed(2)+' (channels under 500 matured installs use the blend). Net cash is cash in minus withdrawals, shipped card cost and payment fees, so inventory purchases are not in it. Required D7 ROAS is the same bar restated at day 7. Blended D1 ROAS including organic installs is '+blendedAll.toFixed(2)+' on '+short(paidCost)+' of paid cost, which is a different thing from the paid-attributed ROAS above.';
+  $('cohNote').textContent='Required D1 ROAS = (1 + admin load) / (net cash per $1 of D1 gross by D'+S.beDay+' x (1 + organic uplift)). Net cash per $1 of D1 gross = '+K.m1.toFixed(2)+' already netted at D1 (recent Oct 10 to 23 cohorts) plus '+(K.histTail*K.tailScale).toFixed(2)+' of later net cash ('+(S.rec?'extrapolated from Oct 10 to 24 signups only, decay fit':'from the Jul 20 to Aug 23 cohorts')+'), scaled by the channel D7/D1 growth vs the blended '+(1+K.blend).toFixed(2)+' (channels under 500 matured installs use the blend). Net cash is cash in minus withdrawals, shipped card cost and payment fees, so inventory purchases are not in it. Required D1 net applies the channel current net-to-gross ratio at D1 (AppsFlyer plain ROAS, which subtracts withdrawals; channels under 500 installs use the paid blend). Required D7 gross is the same bar restated at day 7. Blended D1 ROAS including organic installs is '+blendedAll.toFixed(2)+' on '+short(paidCost)+' of paid cost, which is a different thing from the paid-attributed ROAS above.';
 }
 
 function series(M){

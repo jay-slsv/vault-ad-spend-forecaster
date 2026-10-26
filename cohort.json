@@ -1,107 +1,120 @@
 {
-  "asof": "2026-10-23",
-  "window": "Install cohorts Oct 9 to Oct 21 (UTC) for D1; Oct 9 to Oct 15 for D7 (only fully matured days). AppsFlyer id6756682207, af_purchase only (gross, no withdrawals).",
+  "asof": "2026-10-25",
+  "window": "Install cohorts Oct 10 to Oct 23 (UTC) for D1; Oct 10 to Oct 16 for D7 (only fully matured days). AppsFlyer id6756682207. rev0/rev1/rev7 are af_purchase only (gross, no withdrawals); net1 is AppsFlyer plain D1 revenue (af_purchase minus withdrawals, attributed to install source).",
   "ch": {
     "tiktok": {
-      "cost": 181112.32,
-      "inst": 8256,
-      "rev0": 118500.64,
-      "rev1": 135576.32,
+      "cost": 187353.79,
+      "inst": 8054,
+      "rev0": 124129.37,
+      "rev1": 141621.13,
+      "net1": 88070.72,
       "m7": {
-        "inst": 4815,
-        "rev1": 84777.73,
-        "rev7": 107273.77
+        "inst": 4461,
+        "rev1": 80358.76,
+        "rev7": 101257.85
       }
     },
     "google": {
-      "cost": 45645.19,
-      "inst": 2311,
-      "rev0": 30809.32,
-      "rev1": 35772.61,
+      "cost": 52046.42,
+      "inst": 2428,
+      "rev0": 37793.55,
+      "rev1": 43699.89,
+      "net1": 36356.04,
       "m7": {
-        "inst": 1231,
-        "rev1": 15627.77,
-        "rev7": 20956.59
+        "inst": 1120,
+        "rev1": 15870.47,
+        "rev7": 20550.02
       }
     },
     "liftoff": {
-      "cost": 45039.46,
-      "inst": 2055,
-      "rev0": 23651.64,
-      "rev1": 27474.26,
+      "cost": 47909.68,
+      "inst": 2175,
+      "rev0": 24269.45,
+      "rev1": 28249.07,
+      "net1": 15572.2,
       "m7": {
-        "inst": 1223,
-        "rev1": 16079.83,
-        "rev7": 21528.44
+        "inst": 1150,
+        "rev1": 16742.07,
+        "rev7": 21761.34
       }
     },
     "smadex": {
-      "cost": 5081.05,
-      "inst": 166,
-      "rev0": 972.0,
-      "rev1": 1204.0,
-      "m7": null
+      "cost": 7464.02,
+      "inst": 214,
+      "rev0": 1134.0,
+      "rev1": 1366.0,
+      "net1": 960.73,
+      "m7": {
+        "inst": 21,
+        "rev1": 547.0,
+        "rev7": 547.0
+      }
     },
     "meta": {
-      "cost": 3378.33,
-      "inst": 289,
-      "rev0": 692.0,
-      "rev1": 866.0,
+      "cost": 4995.29,
+      "inst": 351,
+      "rev0": 966.0,
+      "rev1": 1160.0,
+      "net1": 747.21,
       "m7": {
-        "inst": 43,
-        "rev1": 341.0,
-        "rev7": 436.0
+        "inst": 65,
+        "rev1": 476.0,
+        "rev7": 571.0
       }
     },
     "point2web": {
-      "cost": 2988.0,
-      "inst": 249,
-      "rev0": 956.43,
-      "rev1": 1011.43,
+      "cost": 3540.0,
+      "inst": 295,
+      "rev0": 1152.01,
+      "rev1": 1237.01,
+      "net1": 633.18,
       "m7": {
-        "inst": 99,
-        "rev1": 571.43,
-        "rev7": 737.43
+        "inst": 109,
+        "rev1": 394.01,
+        "rev7": 539.01
       }
     },
     "asa": {
-      "cost": 2795.77,
-      "inst": 451,
-      "rev0": 6474.74,
-      "rev1": 6704.74,
+      "cost": 3080.46,
+      "inst": 494,
+      "rev0": 7054.67,
+      "rev1": 7327.67,
+      "net1": 2737.66,
       "m7": {
-        "inst": 242,
-        "rev1": 4656.65,
-        "rev7": 4826.72
+        "inst": 258,
+        "rev1": 4782.04,
+        "rev7": 7347.11
       }
     },
     "snap": {
-      "cost": 2649.48,
-      "inst": 240,
-      "rev0": 2893.99,
-      "rev1": 3239.99,
+      "cost": 3287.05,
+      "inst": 270,
+      "rev0": 2015.0,
+      "rev1": 2351.0,
+      "net1": 1014.05,
       "m7": {
-        "inst": 135,
-        "rev1": 2101.99,
-        "rev7": 2679.45
+        "inst": 136,
+        "rev1": 1290.0,
+        "rev7": 1822.46
       }
     },
     "winklelab": {
-      "cost": 2150.0,
+      "cost": 3425.0,
       "inst": 0,
       "rev0": 0,
       "rev1": 0,
+      "net1": 0,
       "m7": null
     }
   },
   "all": {
-    "inst": 18787,
-    "rev0": 301675.68,
-    "rev1": 363798.97,
+    "inst": 20232,
+    "rev0": 326425.02,
+    "rev1": 391725.37,
     "m7": {
-      "inst": 10438,
-      "rev1": 202088.29,
-      "rev7": 256165.91
+      "inst": 10329,
+      "rev1": 200439.6,
+      "rev7": 256740.14
     }
   },
   "db": {
@@ -140,23 +153,23 @@
       ]
     },
     "recent": {
-      "label": "Signups Oct 9 to Oct 21 (17,832 users, D1 matured; D7 from Oct 9 to Oct 15)",
-      "d1gross": 350209,
-      "d1net": 144350,
-      "e_d1gross": 204929,
-      "e_d1net": 80646,
-      "e_d7gross": 256139,
-      "e_d7net": 98335,
+      "label": "Signups Oct 10 to Oct 23 (Toronto days, D1 matured; D7 from Oct 10 to Oct 16)",
+      "d1gross": 373758,
+      "d1net": 159584,
+      "e_d1gross": 199903,
+      "e_d1net": 81827,
+      "e_d7gross": 248435,
+      "e_d7net": 100584,
       "tail": {
-        "30": 0.247,
-        "45": 0.29,
-        "60": 0.318
+        "30": 0.193,
+        "45": 0.203,
+        "60": 0.205
       },
       "tailLowHigh60": [
-        0.28,
-        0.48
+        0.185,
+        0.285
       ],
-      "note": "Net cash per $1 of D1 gross added after D1, fitted on Oct 9 to 22 signups only (daily increments D2 to D13, exponential decay fit, D60 = 0.73 cumulative; fit range 0.69 to 0.89). D30 and D45 scaled from the Jul-Aug shape."
+      "note": "Net cash per $1 of D1 gross added after D1, fitted on Oct 10 to 24 signups only (daily increments D2 to D14, exponential decay fit, D60 = 0.63 cumulative; low 0.61, high 0.71 if the Jul-Aug decay shape is applied from D14). D1 = 0.43, D7 = 0.50, D14 = 0.57."
     }
   }
 }
